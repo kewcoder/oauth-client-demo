@@ -102,15 +102,18 @@ Click **Connect with HitPay**, complete the authorization flow, and the app will
 - `POST /api/oauth/refresh`  
   Receives a `refresh_token`, requests a new access token, and returns it to the client.
 
+- `GET /api/hitpay/:resource`  
+  Proxies authenticated HitPay API requests from the server to avoid browser CORS issues. Supported resources are `info`, `orders`, `products`, `charges`, and `customers`.
+
 ## Demo Pages
 
 - `/` shows the connect button and the requested scopes.
-- `/connected` shows the session summary and buttons to test API calls:
-  - `GET /v1/info`
-  - `GET /v1/orders`
-  - `GET /v1/products`
-  - `GET /v1/charges`
-  - `GET /v1/customers`
+- `/connected` shows the session summary and buttons to test proxied API calls:
+  - `GET /api/hitpay/info`
+  - `GET /api/hitpay/orders`
+  - `GET /api/hitpay/products`
+  - `GET /api/hitpay/charges`
+  - `GET /api/hitpay/customers`
 
 Some buttons may fail if the related scopes are not approved by the OAuth provider. This is useful for demonstrating insufficient-scope errors.
 

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-const config = useRuntimeConfig()
-const apiBase = config.public.hitpayApiBaseUrl
-
 const tokenInfo = ref<any>(null)
 const result = ref<any>(null)
 const loading = ref<string | null>(null)
@@ -35,98 +32,35 @@ const loadTokenInfo = () => {
   }
 }
 
-function saveTokenCookie(session: Record<string, any>, updates: Record<string, any>) {
-  const updated = { ...session, ...updates }
-  document.cookie = `${TOKEN_COOKIE}=${encodeURIComponent(JSON.stringify(updated))}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`
-  return updated
-}
-
-async function doRefresh(session: Record<string, any>) {
-  const token = await $fetch<Record<string, any>>('/api/oauth/refresh', {
-    method: 'POST',
-    body: { refresh_token: session.refresh_token },
-  })
-  return saveTokenCookie(session, token)
-}
-
-async function hitpayFetch(path: string) {
-  let session = getTokenCookie()
-  console.log(session)
-  if (!session?.access_token) throw new Error('Not connected')
-
-  try {
-    return await $fetch(`${apiBase}${path}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-  } catch (err: any) {
-    if (err?.response?.status === 401 && session.refresh_token) {
-      session = await doRefresh(session)
-      return $fetch(`${apiBase}${path}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
-    }
-    throw err
-  }
-}
-
-const callInfo = async () => {
-  loading.value = 'info'
+async function callHitpayResource(resource: string) {
+  loading.value = resource
   result.value = null
   try {
-    result.value = await hitpayFetch('/v1/info')
+    result.value = await $fetch(`/api/hitpay/${resource}`)
   } catch (error: any) {
     result.value = error?.data || { message: error?.message || 'Request failed' }
   } finally {
     loading.value = null
+    loadTokenInfo()
   }
 }
+
+const callInfo = () => callHitpayResource('info')
 
 const callOrders = async () => {
-  loading.value = 'orders'
-  result.value = null
-  try {
-    result.value = await hitpayFetch('/v1/orders')
-  } catch (error: any) {
-    result.value = error?.data || { message: error?.message || 'Request failed' }
-  } finally {
-    loading.value = null
-  }
+  await callHitpayResource('orders')
 }
 
 const getProducts = async () => {
-  loading.value = 'products'
-  result.value = null
-  try {
-    result.value = await hitpayFetch('/v1/products')
-  } catch (error: any) {
-    result.value = error?.data || { message: error?.message || 'Request failed' }
-  } finally {
-    loading.value = null
-  }
+  await callHitpayResource('products')
 }
 
 const getCharges = async () => {
-  loading.value = 'charges'
-  result.value = null
-  try {
-    result.value = await hitpayFetch('/v1/charges')
-  } catch (error: any) {
-    result.value = error?.data || { message: error?.message || 'Request failed' }
-  } finally {
-    loading.value = null
-  }
+  await callHitpayResource('charges')
 }
 
 const getCustomers = async () => {
-  loading.value = 'customers'
-  result.value = null
-  try {
-    result.value = await hitpayFetch('/v1/customers')
-  } catch (error: any) {
-    result.value = error?.data || { message: error?.message || 'Request failed' }
-  } finally {
-    loading.value = null
-  }
+  await callHitpayResource('customers')
 }
 
 const logout = () => {

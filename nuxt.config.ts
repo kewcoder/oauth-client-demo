@@ -17,8 +17,5 @@ export default defineNuxtConfig({
     hitpayApiBaseUrl: process.env.HITPAY_API_BASE_URL,
     hitpayRedirectUri: process.env.HITPAY_REDIRECT_URI,
     hitpayScopes: process.env.HITPAY_SCOPES || 'read_orders read_customers read_products',
-    public: {
-      hitpayApiBaseUrl: process.env.HITPAY_API_BASE_URL,
-    }
   }
 })
