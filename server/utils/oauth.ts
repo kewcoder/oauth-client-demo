@@ -19,6 +19,11 @@ export function buildAuthorizeUrl(event: H3Event) {
   return { url: url.toString(), state };
 }
 
+function buildTokenUrl(event: H3Event) {
+  const config = useRuntimeConfig(event);
+  return new URL("/v1/oauth/token", config.hitpayApiBaseUrl).toString();
+}
+
 export async function refreshAccessToken(event: H3Event, refreshToken: string) {
   const config = useRuntimeConfig(event);
 
@@ -28,7 +33,7 @@ export async function refreshAccessToken(event: H3Event, refreshToken: string) {
     scope?: string;
     refresh_token?: string;
     expires_in?: number;
-  }>(config.hitpayTokenUrl, {
+  }>(buildTokenUrl(event), {
     method: "POST",
     body: {
       client_id: config.hitpayClientId,
@@ -49,7 +54,7 @@ export async function exchangeCodeForToken(event: H3Event, code: string) {
     refresh_token?: string;
     expires_in?: number;
     merchant_id?: string;
-  }>(config.hitpayTokenUrl, {
+  }>(buildTokenUrl(event), {
     method: "POST",
     body: {
       client_id: config.hitpayClientId,

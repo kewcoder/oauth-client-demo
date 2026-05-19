@@ -38,9 +38,7 @@ cp .env.example .env
 Fill in the following values in `.env`:
 
 ```bash
-NUXT_SESSION_SECRET=change-this-to-a-long-random-string
 HITPAY_OAUTH_AUTHORIZE_URL=https://dashboard.src.test/oauth/business/authorize
-HITPAY_OAUTH_TOKEN_URL=https://api.src.test/v1/oauth/token
 HITPAY_API_BASE_URL=https://api.src.test
 HITPAY_CLIENT_ID=your-client-id
 HITPAY_CLIENT_SECRET=your-client-secret
