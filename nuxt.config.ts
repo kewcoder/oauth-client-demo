@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs'
 
+const hitpayScopes = process.env.HITPAY_SCOPES || 'read:business read:orders read:products'
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-12-01',
   devtools: { enabled: true },
@@ -16,6 +18,9 @@ export default defineNuxtConfig({
     hitpayAuthorizeUrl: process.env.HITPAY_OAUTH_AUTHORIZE_URL,
     hitpayApiBaseUrl: process.env.HITPAY_API_BASE_URL,
     hitpayRedirectUri: process.env.HITPAY_REDIRECT_URI,
-    hitpayScopes: process.env.HITPAY_SCOPES || 'read_orders read_customers read_products',
+    hitpayScopes,
+    public: {
+      hitpayScopes,
+    },
   }
 })

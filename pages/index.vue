@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useRoute } from "nuxt/app";
+import { useRoute, useRuntimeConfig } from "nuxt/app";
 
 const connecting = ref(false);
 const route = useRoute();
+const config = useRuntimeConfig();
 const accessDenied = computed(() => route.query.error === "access_denied");
+const requestedScopes = computed(() =>
+  String(config.public.hitpayScopes || "")
+    .split(/\s+/)
+    .filter(Boolean),
+);
 
 const connect = async () => {
   connecting.value = true;
@@ -51,10 +57,7 @@ const connect = async () => {
     >
       <h2>Requested Scopes</h2>
       <ul>
-        <li>read_orders</li>
-        <li>read_products</li>
-        <li>read:charges (not approved)</li>
-        <li>read:customers (not approved)</li>
+        <li v-for="scope in requestedScopes" :key="scope">{{ scope }}</li>
       </ul>
 
       <button
