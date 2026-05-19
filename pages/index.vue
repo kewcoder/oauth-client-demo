@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
+import { useRoute } from "nuxt/app";
+
 const connecting = ref(false);
 const route = useRoute();
 const accessDenied = computed(() => route.query.error === "access_denied");
