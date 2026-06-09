@@ -6,10 +6,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-12-01',
   devtools: { enabled: true },
   devServer: {
-    // https: {
-    //   key: readFileSync('./certs/localhost-key.pem', 'utf-8'),
-    //   cert: readFileSync('./certs/localhost.pem', 'utf-8')
-    // },
+    https: {
+      key: readFileSync('./certs/localhost-key.pem', 'utf-8'),
+      cert: readFileSync('./certs/localhost.pem', 'utf-8')
+    },
     port: 3000
   },
   runtimeConfig: {

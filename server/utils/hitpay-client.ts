@@ -1,41 +1,5 @@
-import { refreshAccessToken } from "../../utils/oauth";
-import {
-  getHitpaySessionCookie,
-  setHitpaySessionCookie,
-  type HitpaySession,
-} from "../../utils/session";
-
-const ALLOWED_RESOURCES = new Set([
-  "info",
-  "orders",
-  "products",
-  "charges",
-  "customers",
-]);
-
-function getResourcePath(event: any) {
-  const path = String(getRouterParam(event, "path") || "").replace(/^\/+|\/+$/g, "");
-
-  if (!ALLOWED_RESOURCES.has(path)) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: "Unsupported HitPay API resource",
-    });
-  }
-
-  return `/v1/${path}`;
-}
-
-function buildHitpayUrl(event: any, path: string) {
-  const config = useRuntimeConfig(event);
-  return new URL(path, config.hitpayApiBaseUrl).toString();
-}
-
-async function fetchHitpay(event: any, path: string, accessToken: string) {
-  return $fetch(buildHitpayUrl(event, path), {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-}
+import { refreshAccessToken } from "./oauth";
+import { getHitpaySessionCookie, setHitpaySessionCookie, type HitpaySession } from "./session";
 
 function getErrorStatus(error: any) {
   return Number(error?.response?.status ?? error?.statusCode) || 500;
@@ -61,17 +25,34 @@ function applyTokenRefresh(session: HitpaySession, token: Record<string, any>): 
   };
 }
 
-export default defineEventHandler(async (event) => {
+export async function hitpayFetch(
+  event: any,
+  path: string,
+  options: Record<string, any> = {},
+) {
   const session = getHitpaySessionCookie(event);
 
   if (!session?.access_token) {
     throw createError({ statusCode: 401, statusMessage: "Not connected" });
   }
 
-  const path = getResourcePath(event);
+  const config = useRuntimeConfig(event);
+  const url = new URL(path, config.hitpayApiBaseUrl).toString();
+
+  async function doFetch(accessToken: string) {
+    return $fetch(url, {
+      ...options,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(options.headers ?? {}),
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
 
   try {
-    return await fetchHitpay(event, path, session.access_token);
+    return await doFetch(session.access_token);
   } catch (error: any) {
     if (getErrorStatus(error) !== 401 || !session.refresh_token) {
       throw createError({
@@ -85,6 +66,6 @@ export default defineEventHandler(async (event) => {
     const refreshedSession = applyTokenRefresh(session, token);
     setHitpaySessionCookie(event, refreshedSession);
 
-    return fetchHitpay(event, path, refreshedSession.access_token);
+    return doFetch(refreshedSession.access_token);
   }
-});
+}
