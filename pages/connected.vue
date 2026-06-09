@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // ── Session ──────────────────────────────────────────────────────────────────
 const tokenInfo = ref<any>(null)
+const tokenData = ref<{ access_token: string; refresh_token: string | null } | null>(null)
 const infoResult = ref<any>(null)
 const infoLoading = ref(false)
+const copied = ref<string | null>(null)
+const tokensVisible = ref(false)
 
 const TOKEN_COOKIE = 'hitpay_token'
 
@@ -29,8 +32,19 @@ const loadTokenInfo = () => {
     scope: session.scope || null,
     expires_in: session.expires_in || null,
     business: session.business || null,
-    has_access_token: Boolean(session.access_token),
   }
+  tokenData.value = {
+    access_token: session.access_token || '',
+    refresh_token: session.refresh_token || null,
+  }
+}
+
+async function copyToClipboard(text: string, key: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    copied.value = key
+    setTimeout(() => { copied.value = null }, 2000)
+  } catch {}
 }
 
 async function callInfo() {
@@ -193,6 +207,71 @@ const canSend = computed(() => {
     <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 12px;">
       <h2 style="margin-top: 0;">Session</h2>
       <pre style="margin: 0;">{{ tokenInfo }}</pre>
+    </div>
+
+    <!-- Tokens -->
+    <div v-if="tokenData" style="margin-bottom: 24px; border: 1px solid #ddd; border-radius: 12px; overflow: hidden;">
+      <button
+        @click="tokensVisible = !tokensVisible"
+        style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: none; border: none; cursor: pointer; font-size: 15px; font-weight: 600; font-family: inherit; text-align: left;"
+      >
+        <span>Tokens</span>
+        <span style="font-size: 12px; color: #888;">{{ tokensVisible ? '▲ Hide' : '▼ Show' }}</span>
+      </button>
+
+      <div v-if="tokensVisible" style="padding: 0 20px 20px;">
+        <p style="font-size: 13px; color: #666; margin-top: 0;">
+          Use the access token as <code>Authorization: Bearer &lt;token&gt;</code> in Postman or any HTTP client.
+        </p>
+
+      <!-- Access Token -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 13px; font-weight: 600;">Access Token</span>
+          <button
+            @click="copyToClipboard(tokenData.access_token, 'access')"
+            style="font-size: 12px; padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: copied === 'access' ? '#dcfce7' : '#f9fafb'; color: copied === 'access' ? '#166534' : 'inherit';"
+          >
+            {{ copied === 'access' ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 12px; word-break: break-all; color: #374151;">
+          {{ tokenData.access_token }}
+        </div>
+      </div>
+
+      <!-- Authorization Header -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 13px; font-weight: 600;">Authorization Header</span>
+          <button
+            @click="copyToClipboard('Bearer ' + tokenData.access_token, 'bearer')"
+            style="font-size: 12px; padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: copied === 'bearer' ? '#dcfce7' : '#f9fafb'; color: copied === 'bearer' ? '#166534' : 'inherit';"
+          >
+            {{ copied === 'bearer' ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 12px; word-break: break-all; color: #374151;">
+          Bearer {{ tokenData.access_token }}
+        </div>
+      </div>
+
+      <!-- Refresh Token -->
+      <div v-if="tokenData.refresh_token">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 13px; font-weight: 600;">Refresh Token</span>
+          <button
+            @click="copyToClipboard(tokenData.refresh_token!, 'refresh')"
+            style="font-size: 12px; padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: copied === 'refresh' ? '#dcfce7' : '#f9fafb'; color: copied === 'refresh' ? '#166534' : 'inherit';"
+          >
+            {{ copied === 'refresh' ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 12px; word-break: break-all; color: #374151;">
+          {{ tokenData.refresh_token }}
+        </div>
+      </div>
+      </div><!-- end tokensVisible -->
     </div>
 
     <!-- GET /info -->
