@@ -1,12 +1,16 @@
 import { hitpayFetch } from "../../utils/hitpay-client";
 
 const ALLOWED_RESOURCES = new Set(["info"]);
-const PAYMENT_REQUESTS_RE = /^payment-requests(\/[^/]+)?$/;
+const ALLOWED_RES = [
+  /^payment-requests(\/[^/]+)?$/,
+  /^charges(\/[^/]+)?$/,
+  /^refund(\/[^/]+)?$/,
+];
 
 function getResourcePath(event: any): string {
   const path = String(getRouterParam(event, "path") || "").replace(/^\/+|\/+$/g, "");
 
-  if (ALLOWED_RESOURCES.has(path) || PAYMENT_REQUESTS_RE.test(path)) {
+  if (ALLOWED_RESOURCES.has(path) || ALLOWED_RES.some(re => re.test(path))) {
     return `/v1/${path}`;
   }
 

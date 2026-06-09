@@ -151,6 +151,116 @@ const canSend = computed(() => {
 })
 
 const activeTabInfo = computed(() => TABS.find(t => t.id === activeTab.value)!)
+
+// ── Charges ───────────────────────────────────────────────────────────────────
+type ChargesTab = 'list' | 'show'
+const chargesTab = ref<ChargesTab>('list')
+const chargesResult = ref<any>(null)
+const chargesLoading = ref(false)
+const chargesErrorMsg = ref<string | null>(null)
+const chargesId = ref('')
+const chargesPerPage = ref('10')
+const chargesCurrentPage = ref('1')
+
+const CHARGES_TABS = [
+  { id: 'list' as ChargesTab, label: 'List', method: 'GET', scope: 'payments:read', color: '#3b82f6' },
+  { id: 'show' as ChargesTab, label: 'Show', method: 'GET', scope: 'payments:read', color: '#3b82f6' },
+]
+
+function setChargesTab(tab: ChargesTab) {
+  chargesTab.value = tab
+  chargesResult.value = null
+  chargesErrorMsg.value = null
+}
+
+const canSendCharges = computed(() =>
+  !chargesLoading.value && !(chargesTab.value === 'show' && !chargesId.value.trim())
+)
+
+async function sendCharges() {
+  chargesLoading.value = true
+  chargesResult.value = null
+  chargesErrorMsg.value = null
+  try {
+    if (chargesTab.value === 'list') {
+      const params = new URLSearchParams()
+      if (chargesPerPage.value) params.set('per_page', chargesPerPage.value)
+      if (chargesCurrentPage.value) params.set('current_page', chargesCurrentPage.value)
+      chargesResult.value = await $fetch(`/api/hitpay/charges?${params}`)
+    } else {
+      chargesResult.value = await $fetch(`/api/hitpay/charges/${chargesId.value}`)
+    }
+  } catch (e: any) {
+    chargesErrorMsg.value = e?.statusMessage || e?.message || 'Request failed'
+    chargesResult.value = e?.data ?? null
+  } finally {
+    chargesLoading.value = false
+  }
+}
+
+// ── Refunds ───────────────────────────────────────────────────────────────────
+type RefundsTab = 'show' | 'create'
+const refundsTab = ref<RefundsTab>('create')
+const refundsResult = ref<any>(null)
+const refundsLoading = ref(false)
+const refundsErrorMsg = ref<string | null>(null)
+const refundId = ref('')
+const refundJsonError = ref<string | null>(null)
+
+const REFUND_EXAMPLE = JSON.stringify({
+  payment_id: 'charge-uuid-here',
+  amount: 10.00,
+  send_email: true,
+  email: 'customer@example.com',
+  webhook: 'https://example.com/webhook',
+}, null, 2)
+
+const refundBody = ref(REFUND_EXAMPLE)
+
+const REFUNDS_TABS = [
+  { id: 'create' as RefundsTab, label: 'Create', method: 'POST', scope: 'payments:refund', color: '#22c55e' },
+  { id: 'show'   as RefundsTab, label: 'Show',   method: 'GET',  scope: 'payments:read',   color: '#3b82f6' },
+]
+
+function setRefundsTab(tab: RefundsTab) {
+  refundsTab.value = tab
+  refundsResult.value = null
+  refundsErrorMsg.value = null
+  refundJsonError.value = null
+}
+
+const canSendRefunds = computed(() => {
+  if (refundsLoading.value) return false
+  if (refundsTab.value === 'show' && !refundId.value.trim()) return false
+  return true
+})
+
+async function sendRefunds() {
+  refundsLoading.value = true
+  refundsResult.value = null
+  refundsErrorMsg.value = null
+  try {
+    if (refundsTab.value === 'show') {
+      refundsResult.value = await $fetch(`/api/hitpay/refund/${refundId.value}`)
+    } else {
+      try { JSON.parse(refundBody.value) } catch (e: any) {
+        refundJsonError.value = `Invalid JSON: ${e.message}`
+        refundsLoading.value = false
+        return
+      }
+      refundJsonError.value = null
+      refundsResult.value = await $fetch('/api/hitpay/refund', {
+        method: 'POST',
+        body: JSON.parse(refundBody.value),
+      })
+    }
+  } catch (e: any) {
+    refundsErrorMsg.value = e?.statusMessage || e?.message || 'Request failed'
+    refundsResult.value = e?.data ?? null
+  } finally {
+    refundsLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -328,13 +438,138 @@ const activeTabInfo = computed(() => TABS.find(t => t.id === activeTab.value)!)
       </button>
     </div>
 
-    <!-- Response -->
+    <!-- PR Response -->
     <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 40px;">
       <h2 style="margin-top: 0;">Response</h2>
       <div v-if="prErrorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">
         {{ prErrorMsg }}
       </div>
       <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ prResult !== null ? JSON.stringify(prResult, null, 2) : '— no response yet —' }}</pre>
+    </div>
+
+    <!-- ── Charges ─────────────────────────────────────────────────────────── -->
+    <h2 style="margin-bottom: 16px;">Charges</h2>
+
+    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; overflow-x: auto;margin-bottom:24px">
+      <button
+        v-for="tab in CHARGES_TABS"
+        :key="tab.id"
+        @click="setChargesTab(tab.id)"
+        :style="`
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border: none; border-radius: 8px 8px 0 0;
+          cursor: pointer; white-space: nowrap; font-family: inherit; font-size: 14px;
+          font-weight: ${chargesTab === tab.id ? '700' : '400'};
+          background: ${chargesTab === tab.id ? '#fff' : 'transparent'};
+          border-bottom: ${chargesTab === tab.id ? '2px solid #111' : '2px solid transparent'};
+          margin-bottom: -2px;
+        `"
+      >
+        <span :style="`font-size: 11px; font-weight: 700; color: #fff; background: ${tab.color}; border-radius: 4px; padding: 2px 5px;`">{{ tab.method }}</span>
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; margin-bottom: 24px;margin-top:24px">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <span style="font-size: 13px; color: #666;">Required scope:</span>
+        <code style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 13px;">payments:read</code>
+      </div>
+
+      <template v-if="chargesTab === 'list'">
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/charges</code> — list charges.</p>
+        <div style="display: flex; flex-direction: row; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+            per_page
+            <input v-model="chargesPerPage" type="number" min="1" max="100" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; width: 80px;" />
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+            current_page
+            <input v-model="chargesCurrentPage" type="number" min="1" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; width: 80px;" />
+          </label>
+        </div>
+      </template>
+
+      <template v-else>
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/charges/{id}</code> — retrieve a single charge.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Charge ID <span style="color: #ef4444;">*</span>
+          <input v-model="chargesId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <button
+        @click="sendCharges"
+        :disabled="!canSendCharges"
+        :style="`margin-top: 4px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendCharges ? 'pointer' : 'not-allowed'}; background: ${canSendCharges ? '#111' : '#d1d5db'}; color: ${canSendCharges ? '#fff' : '#9ca3af'};`"
+      >{{ chargesLoading ? 'Loading…' : 'Send Request' }}</button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 40px;">
+      <h2 style="margin-top: 0;">Response</h2>
+      <div v-if="chargesErrorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">{{ chargesErrorMsg }}</div>
+      <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ chargesResult !== null ? JSON.stringify(chargesResult, null, 2) : '— no response yet —' }}</pre>
+    </div>
+
+    <!-- ── Refunds ─────────────────────────────────────────────────────────── -->
+    <h2 style="margin-bottom: 16px;">Refunds</h2>
+
+    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; overflow-x: auto;">
+      <button
+        v-for="tab in REFUNDS_TABS"
+        :key="tab.id"
+        @click="setRefundsTab(tab.id)"
+        :style="`
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border: none; border-radius: 8px 8px 0 0;
+          cursor: pointer; white-space: nowrap; font-family: inherit; font-size: 14px;
+          font-weight: ${refundsTab === tab.id ? '700' : '400'};
+          background: ${refundsTab === tab.id ? '#fff' : 'transparent'};
+          border-bottom: ${refundsTab === tab.id ? '2px solid #111' : '2px solid transparent'};
+          margin-bottom: -2px;
+        `"
+      >
+        <span :style="`font-size: 11px; font-weight: 700; color: #fff; background: ${tab.color}; border-radius: 4px; padding: 2px 5px;`">{{ tab.method }}</span>
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <span style="font-size: 13px; color: #666;">Required scope:</span>
+        <code style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 13px;">{{ refundsTab === 'create' ? 'payments:refund' : 'payments:read' }}</code>
+      </div>
+
+      <template v-if="refundsTab === 'create'">
+        <p style="margin-top: 0; color: #555;"><strong>POST</strong> <code>/v1/refund</code> — create a refund for a charge.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #666;">Request Body (JSON)</span>
+          <button @click="refundBody = REFUND_EXAMPLE; refundJsonError = null" style="font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f9fafb;">Use Example</button>
+        </div>
+        <textarea v-model="refundBody" @input="refundJsonError = null" rows="10"
+          style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: #fafafa;" />
+        <p v-if="refundJsonError" style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ refundJsonError }}</p>
+      </template>
+
+      <template v-else>
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/refund/{id}</code> — retrieve a refund.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Refund ID <span style="color: #ef4444;">*</span>
+          <input v-model="refundId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <button
+        @click="sendRefunds"
+        :disabled="!canSendRefunds"
+        :style="`margin-top: 4px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendRefunds ? 'pointer' : 'not-allowed'}; background: ${canSendRefunds ? '#111' : '#d1d5db'}; color: ${canSendRefunds ? '#fff' : '#9ca3af'};`"
+      >{{ refundsLoading ? 'Loading…' : 'Send Request' }}</button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 40px;">
+      <h2 style="margin-top: 0;">Response</h2>
+      <div v-if="refundsErrorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">{{ refundsErrorMsg }}</div>
+      <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ refundsResult !== null ? JSON.stringify(refundsResult, null, 2) : '— no response yet —' }}</pre>
     </div>
 
   </div>
