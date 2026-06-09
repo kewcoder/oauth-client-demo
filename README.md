@@ -1,138 +1,213 @@
-# Nuxt OAuth Demo App
+# HitPay OAuth Client Demo
 
-A Nuxt 3 OAuth client demo that shows how a third-party app connects a HitPay merchant account, stores the OAuth session locally, and calls the HitPay API with an access token.
+A Nuxt 3 demo that shows how a third-party app connects a HitPay merchant account via OAuth 2.0, stores the session in a cookie, and makes authenticated API calls — including a full Payment Requests playground.
 
 ## Features
 
-- Starts the authorization code flow through `/api/oauth/start`.
-- Handles the OAuth callback at `/api/oauth/callback`.
-- Exchanges the authorization code for an access token and refresh token.
-- Stores a session summary in the `hitpay_token` cookie.
-- Tests authenticated API calls from the `/connected` page.
-- Automatically refreshes the access token when an API request returns `401`.
+- Enter OAuth app credentials in the browser (no `.env` required for credentials)
+- Authorization code flow via `/api/oauth/start` → HitPay → `/api/oauth/callback`
+- Session stored in `hitpay_token` cookie after successful auth
+- Automatic access token refresh on `401` responses
+- Server-side API proxy to avoid CORS issues
+- Payment Requests playground: List, Show, Create, Update, Delete
+- Local HTTPS dev server with optional `mkcert` certificates
 
-## Prerequisites
-
-- A modern Node.js version compatible with Nuxt 3.
-- npm.
-- OAuth client credentials from HitPay:
-  - Client ID
-  - Client Secret
-  - Redirect URI
-- Local HTTPS certificates for development.
+---
 
 ## Setup
 
-Install dependencies:
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-Copy the environment file:
+### 2. Configure environment
+
+Copy the example file:
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in the following values in `.env`:
+The only required values are the two server URLs:
 
-```bash
-HITPAY_OAUTH_AUTHORIZE_URL=https://dashboard.src.test/oauth/business/authorize
-HITPAY_API_BASE_URL=https://api.src.test
-HITPAY_CLIENT_ID=your-client-id
-HITPAY_CLIENT_SECRET=your-client-secret
-HITPAY_REDIRECT_URI=https://localhost:3000/api/oauth/callback
-HITPAY_SCOPES=read:business read:orders read:products
+```env
+HITPAY_OAUTH_AUTHORIZE_URL=https://dashboard.hit-pay.com/oauth/authorize
+HITPAY_API_BASE_URL=https://api.hit-pay.com
 ```
 
-Make sure the redirect URI registered with the OAuth provider exactly matches `HITPAY_REDIRECT_URI`.
+> Credentials (Client ID, Client Secret, Redirect URI, Scopes) are entered directly in the browser on the home page and saved to a `hitpay_config` cookie — you do **not** need to put them in `.env`.
 
-## Local HTTPS Certificates
+### 3. Local HTTPS (optional)
 
-This project runs the Nuxt dev server with HTTPS and reads the following files:
+The dev server runs on HTTPS when cert files are present at `certs/`. If the files are missing the server falls back to HTTP automatically.
 
-- `certs/localhost-key.pem`
-- `certs/localhost.pem`
-
-If you use `mkcert`, generate the certificates with:
+Generate certs with [`mkcert`](https://github.com/FiloSottile/mkcert):
 
 ```bash
 mkdir -p certs
 mkcert -key-file certs/localhost-key.pem -cert-file certs/localhost.pem localhost
 ```
 
-The `certs/` folder is ignored by git because it contains local files.
+> `certs/` is git-ignored. Never commit certificate files.
 
-## Running the Demo
-
-Start the dev server:
+### 4. Start dev server
 
 ```bash
 npm run dev
 ```
 
-Open:
+Open **https://localhost:3000** (or http if no certs).
 
-```text
-https://localhost:3000
-```
+---
 
-Click **Connect with HitPay**, complete the authorization flow, and the app will redirect to `/connected`.
+## Usage
+
+### Connecting
+
+1. Open the home page.
+2. Fill in the form:
+   - **Client ID** — from your HitPay OAuth app
+   - **Client Secret** — from your HitPay OAuth app
+   - **Redirect URI** — must match exactly what is registered in HitPay (e.g. `https://localhost:3000/api/oauth/callback`)
+   - **Scopes** — space-separated list (see [Scopes](#scopes) below)
+3. Click **Connect with HitPay**.
+4. Complete authorization on HitPay — you'll be redirected back to `/connected`.
+
+The form values are saved to the `hitpay_config` cookie so they persist across page reloads.
+
+### Connected page
+
+After a successful OAuth flow, `/connected` shows:
+
+- **Session** — token type, granted scopes, business info
+- **GET /info** — quick test of the authenticated connection
+- **Payment Requests playground** — tabbed UI for all five endpoints (see below)
+
+---
 
 ## OAuth Flow
 
-1. The user clicks the connect button on the home page.
-2. The browser is redirected to `/api/oauth/start`.
-3. The server builds an authorize URL with `client_id`, `redirect_uri`, `response_type=code`, `scope`, and `state`.
-4. HitPay redirects back to `/api/oauth/callback` with an authorization code.
-5. The server exchanges the code for tokens through the token endpoint.
-6. The server fetches the business summary from `/v1/info`.
-7. The session is stored in the `hitpay_token` cookie.
-8. The user is redirected to `/connected` to try API requests.
+```
+Browser                  This App                    HitPay
+   |                        |                           |
+   |-- fill form, click --> |                           |
+   |                        |-- redirect to authorize ->|
+   |                        |                           |-- user approves
+   |                        |<-- callback with code ----|
+   |                        |-- POST /oauth2/token ---->|
+   |                        |<-- access + refresh token-|
+   |                        |-- GET /v1/info ---------->|
+   |                        |<-- business summary ------|
+   |<-- redirect /connected |                           |
+```
 
-## Local Endpoints
+1. User fills in credentials on `/` and clicks Connect.
+2. Credentials are saved to `hitpay_config` cookie; browser goes to `/api/oauth/start`.
+3. Server reads credentials from cookie, builds the authorization URL, and redirects.
+4. HitPay redirects back to `/api/oauth/callback` with `?code=...`.
+5. Server exchanges the code for tokens using the stored credentials.
+6. Server fetches the business summary from `GET /v1/info`.
+7. Session is written to `hitpay_token` cookie; user lands on `/connected`.
 
-- `GET /api/oauth/start`  
-  Starts the OAuth flow and redirects to the authorization URL.
+---
 
-- `GET /api/oauth/callback`  
-  Handles the OAuth callback, exchanges the authorization code for tokens, stores the session, and redirects to `/connected`.
+## Payment Requests Playground
 
-- `POST /api/oauth/refresh`  
-  Receives a `refresh_token`, requests a new access token, and returns it to the client.
+Available on `/connected` after authorizing. Each tab maps to one endpoint:
 
-- `GET /api/hitpay/:resource`  
-  Proxies authenticated HitPay API requests from the server to avoid browser CORS issues. Supported resources are `info`, `orders`, `products`, `charges`, and `customers`.
+| Tab    | Method   | Endpoint                        | Required scope     |
+|--------|----------|---------------------------------|--------------------|
+| List   | GET      | `/v1/payment-requests`          | `payments:read`    |
+| Show   | GET      | `/v1/payment-requests/{id}`     | `payments:read`    |
+| Create | POST     | `/v1/payment-requests`          | `payments:create`  |
+| Update | PUT      | `/v1/payment-requests/{id}`     | `payments:create`  |
+| Delete | DELETE   | `/v1/payment-requests/{id}`     | `payments:cancel`  |
 
-## Demo Pages
+Each tab includes an **example payload** button. All requests go through the server proxy at `/api/hitpay/...` so the access token is never exposed to the browser.
 
-- `/` shows the connect button and the requested scopes.
-- `/connected` shows the session summary and buttons to test proxied API calls:
-  - `GET /api/hitpay/info`
-  - `GET /api/hitpay/orders`
-  - `GET /api/hitpay/products`
-  - `GET /api/hitpay/charges`
-  - `GET /api/hitpay/customers`
+### Create payload fields
 
-Some buttons may fail if the related scopes are not approved by the OAuth provider. This is useful for demonstrating insufficient-scope errors.
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `currency` | string | yes | ISO 4217, e.g. `SGD` |
+| `amount` | number | yes | Min `0.30` |
+| `purpose` | string | no | Payment description |
+| `name` | string | no | Customer name |
+| `email` | string | no | Customer email |
+| `phone` | string | no | Up to 15 chars |
+| `redirect_url` | string | no | URL after payment |
+| `webhook` | string | no | Webhook callback URL |
+| `allow_repeated_payments` | `"true"` / `"false"` | no | Default `"false"` |
+| `send_email` | boolean | no | |
+| `send_sms` | boolean | no | |
+| `reference_number` | string | no | Max 255 chars |
+| `expiry_date` | string | no | Format: `Y-m-d H:i:s` |
+| `payment_methods` | string[] | no | Filter accepted methods |
+| `metadata` | object | no | Arbitrary key-value pairs |
 
-## Development Notes
+---
 
-- The `npm run dev` script sets `NODE_TLS_REJECT_UNAUTHORIZED=0` to make local development with self-signed certificates easier.
-- Do not commit the `.env` file or anything inside `certs/`.
-- The `hitpay_token` cookie is intentionally readable on the client for demo purposes. For production apps, store tokens in a server-side session or an `httpOnly` cookie.
+## Scopes
 
-## Build
+Recommended scopes for the full demo:
+
+```
+business:read payments payments:read payments:create payments:cancel payments:refund
+```
+
+| Scope | Grants access to |
+|---|---|
+| `business:read` | `GET /v1/info` |
+| `payments` | General payments access |
+| `payments:read` | List and show payment requests |
+| `payments:create` | Create and update payment requests |
+| `payments:cancel` | Delete / cancel payment requests |
+| `payments:refund` | Refund payments |
+
+---
+
+## Server API Proxy
+
+All HitPay API calls from the browser go through `server/api/hitpay/[...path].ts`. This keeps the access token server-side and avoids CORS issues.
+
+| Method | Path | Proxies to |
+|---|---|---|
+| GET | `/api/hitpay/info` | `GET /v1/info` |
+| GET | `/api/hitpay/payment-requests` | `GET /v1/payment-requests` |
+| GET | `/api/hitpay/payment-requests/:id` | `GET /v1/payment-requests/:id` |
+| POST | `/api/hitpay/payment-requests` | `POST /v1/payment-requests` |
+| PUT | `/api/hitpay/payment-requests/:id` | `PUT /v1/payment-requests/:id` |
+| DELETE | `/api/hitpay/payment-requests/:id` | `DELETE /v1/payment-requests/:id` |
+
+---
+
+## Cookies
+
+| Cookie | Contents | httpOnly |
+|---|---|---|
+| `hitpay_config` | OAuth app credentials (client ID, secret, redirect URI, scopes) | No |
+| `hitpay_token` | OAuth session (access token, refresh token, business summary) | No |
+
+> Both cookies are readable by JavaScript for demo purposes. In a production app, store tokens in `httpOnly` server-side sessions.
+
+---
+
+## Deployment
+
+No cert files are needed in production — the HTTPS config is skipped automatically when `NODE_ENV=production` or when cert files are absent.
+
+Only the two server URL env vars are required:
+
+```env
+HITPAY_OAUTH_AUTHORIZE_URL=https://dashboard.hit-pay.com/oauth/authorize
+HITPAY_API_BASE_URL=https://api.hit-pay.com
+```
 
 Build for production:
 
 ```bash
 npm run build
-```
-
-Preview the production build:
-
-```bash
 npm run preview
 ```
