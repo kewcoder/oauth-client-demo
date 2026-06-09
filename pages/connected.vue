@@ -450,7 +450,7 @@ async function sendRefunds() {
     <!-- ── Charges ─────────────────────────────────────────────────────────── -->
     <h2 style="margin-bottom: 16px;">Charges</h2>
 
-    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; overflow-x: auto;margin-bottom:24px">
+    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; margin-bottom: 0; overflow-x: auto;">
       <button
         v-for="tab in CHARGES_TABS"
         :key="tab.id"
@@ -470,7 +470,7 @@ async function sendRefunds() {
       </button>
     </div>
 
-    <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; margin-bottom: 24px;margin-top:24px">
+    <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; margin-bottom: 24px;">
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
         <span style="font-size: 13px; color: #666;">Required scope:</span>
         <code style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 13px;">payments:read</code>
@@ -501,7 +501,7 @@ async function sendRefunds() {
       <button
         @click="sendCharges"
         :disabled="!canSendCharges"
-        :style="`margin-top: 4px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendCharges ? 'pointer' : 'not-allowed'}; background: ${canSendCharges ? '#111' : '#d1d5db'}; color: ${canSendCharges ? '#fff' : '#9ca3af'};`"
+        :style="`margin-top: 20px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendCharges ? 'pointer' : 'not-allowed'}; background: ${canSendCharges ? '#111' : '#d1d5db'}; color: ${canSendCharges ? '#fff' : '#9ca3af'};`"
       >{{ chargesLoading ? 'Loading…' : 'Send Request' }}</button>
     </div>
 
@@ -514,7 +514,7 @@ async function sendRefunds() {
     <!-- ── Refunds ─────────────────────────────────────────────────────────── -->
     <h2 style="margin-bottom: 16px;">Refunds</h2>
 
-    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; overflow-x: auto;">
+    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; margin-bottom: 0; overflow-x: auto;">
       <button
         v-for="tab in REFUNDS_TABS"
         :key="tab.id"
@@ -562,7 +562,7 @@ async function sendRefunds() {
       <button
         @click="sendRefunds"
         :disabled="!canSendRefunds"
-        :style="`margin-top: 4px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendRefunds ? 'pointer' : 'not-allowed'}; background: ${canSendRefunds ? '#111' : '#d1d5db'}; color: ${canSendRefunds ? '#fff' : '#9ca3af'};`"
+        :style="`margin-top: 20px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendRefunds ? 'pointer' : 'not-allowed'}; background: ${canSendRefunds ? '#111' : '#d1d5db'}; color: ${canSendRefunds ? '#fff' : '#9ca3af'};`"
       >{{ refundsLoading ? 'Loading…' : 'Send Request' }}</button>
     </div>
 
