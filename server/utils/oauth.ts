@@ -23,7 +23,7 @@ export function buildAuthorizeUrl(event: H3Event) {
 
 function buildTokenUrl(event: H3Event) {
   const config = useRuntimeConfig(event);
-  return new URL("/v1/oauth2/token", config.hitpayApiBaseUrl).toString();
+  return new URL("/v1/open/oauth/token", config.hitpayApiBaseUrl).toString();
 }
 
 export async function refreshAccessToken(event: H3Event, refreshToken: string) {

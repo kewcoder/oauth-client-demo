@@ -96,7 +96,7 @@ Browser                  This App                    HitPay
    |                        |-- redirect to authorize ->|
    |                        |                           |-- user approves
    |                        |<-- callback with code ----|
-   |                        |-- POST /oauth2/token ---->|
+   |                        |-- POST /open/oauth/token ---->|
    |                        |<-- access + refresh token-|
    |                        |-- GET /v1/info ---------->|
    |                        |<-- business summary ------|
