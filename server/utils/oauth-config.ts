@@ -9,7 +9,6 @@ export type OAuthConfig = {
 };
 
 export function getOAuthConfig(event: H3Event): OAuthConfig {
-  const runtimeConfig = useRuntimeConfig(event);
   let cookie: Record<string, string> = {};
 
   try {
@@ -18,9 +17,9 @@ export function getOAuthConfig(event: H3Event): OAuthConfig {
   } catch {}
 
   return {
-    clientId:     cookie.client_id     || String(runtimeConfig.hitpayClientId     || ""),
-    clientSecret: cookie.client_secret || String(runtimeConfig.hitpayClientSecret || ""),
-    redirectUri:  cookie.redirect_uri  || String(runtimeConfig.hitpayRedirectUri  || ""),
-    scopes:       cookie.scopes        || String(runtimeConfig.hitpayScopes       || ""),
+    clientId:     cookie.client_id     || "",
+    clientSecret: cookie.client_secret || "",
+    redirectUri:  cookie.redirect_uri  || "",
+    scopes:       cookie.scopes        || "",
   };
 }
