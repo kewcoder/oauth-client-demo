@@ -5,6 +5,10 @@ const ALLOWED_RES = [
   /^payment-requests(\/[^/]+)?$/,
   /^charges(\/[^/]+)?$/,
   /^refund(\/[^/]+)?$/,
+  /^recurring-billing(\/[^/]+)?(\/(pause|resume|setup-intent))?$/,
+  /^recurring-billing-settings$/,
+  /^subscription-plan(\/[^/]+)?$/,
+  /^charge\/recurring-billing\/[^/]+$/,
 ];
 
 function getResourcePath(event: any): string {
@@ -28,8 +32,12 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event);
     const params = new URLSearchParams();
     if (query.per_page) params.set("per_page", String(query.per_page));
+    if (query.perPage) params.set("perPage", String(query.perPage));
     if (query.current_page) params.set("current_page", String(query.current_page));
     if (query.search) params.set("search", String(query.search));
+    if (query.status) params.set("status", String(query.status));
+    if (query.customer_email) params.set("customer_email", String(query.customer_email));
+    if (query.reference) params.set("reference", String(query.reference));
     const qs = params.toString();
     return hitpayFetch(event, qs ? `${path}?${qs}` : path);
   }

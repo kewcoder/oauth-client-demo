@@ -261,6 +261,263 @@ async function sendRefunds() {
     refundsLoading.value = false
   }
 }
+
+// ── Recurring Billing ─────────────────────────────────────────────────────────
+type RbTab = 'list' | 'show' | 'create' | 'update' | 'delete' | 'pause' | 'resume'
+
+const rbTab = ref<RbTab>('list')
+const rbResult = ref<any>(null)
+const rbLoading = ref(false)
+const rbErrorMsg = ref<string | null>(null)
+const rbId = ref('')
+const rbPerPage = ref('10')
+const rbCurrentPage = ref('1')
+const rbStatus = ref('')
+const rbCustomerEmail = ref('')
+const rbReference = ref('')
+const rbJsonError = ref<string | null>(null)
+
+const RB_CREATE_EXAMPLE = JSON.stringify({
+  customer_email: 'customer@example.com',
+  customer_name: 'John Doe',
+  start_date: new Date().toISOString().slice(0, 10),
+  redirect_url: 'https://example.com/success',
+  webhook: 'https://example.com/webhook',
+  save_card: 'true',
+  amount: 20,
+  name: 'Monthly Subscription',
+  currency: 'SGD',
+  payment_methods: ['card'],
+}, null, 2)
+
+const RB_UPDATE_EXAMPLE = JSON.stringify({
+  customer_name: 'Jane Doe',
+  amount: 25,
+  name: 'Updated Subscription',
+}, null, 2)
+
+const rbCreateBody = ref(RB_CREATE_EXAMPLE)
+const rbUpdateBody = ref(RB_UPDATE_EXAMPLE)
+
+const RB_TABS = [
+  { id: 'list'   as RbTab, label: 'List',   method: 'GET',    scope: 'payments:read',   color: '#3b82f6' },
+  { id: 'show'   as RbTab, label: 'Show',   method: 'GET',    scope: 'payments:read',   color: '#3b82f6' },
+  { id: 'create' as RbTab, label: 'Create', method: 'POST',   scope: 'payments:create', color: '#22c55e' },
+  { id: 'update' as RbTab, label: 'Update', method: 'PUT',    scope: 'payments:create', color: '#f59e0b' },
+  { id: 'delete' as RbTab, label: 'Delete', method: 'DELETE', scope: 'payments:cancel', color: '#ef4444' },
+  { id: 'pause'  as RbTab, label: 'Pause',  method: 'POST',   scope: 'payments:cancel', color: '#ef4444' },
+  { id: 'resume' as RbTab, label: 'Resume', method: 'POST',   scope: 'payments:create', color: '#22c55e' },
+]
+
+function setRbTab(tab: RbTab) {
+  rbTab.value = tab
+  rbResult.value = null
+  rbErrorMsg.value = null
+  rbJsonError.value = null
+}
+
+const activeRbTabInfo = computed(() => RB_TABS.find(t => t.id === rbTab.value)!)
+
+const canSendRb = computed(() => {
+  if (rbLoading.value) return false
+  if (['show', 'update', 'delete', 'pause', 'resume'].includes(rbTab.value) && !rbId.value.trim()) return false
+  return true
+})
+
+async function sendRb() {
+  rbLoading.value = true
+  rbResult.value = null
+  rbErrorMsg.value = null
+  try {
+    if (rbTab.value === 'list') {
+      const params = new URLSearchParams()
+      if (rbPerPage.value) params.set('perPage', rbPerPage.value)
+      if (rbCurrentPage.value) params.set('current_page', rbCurrentPage.value)
+      if (rbStatus.value) params.set('status', rbStatus.value)
+      if (rbCustomerEmail.value) params.set('customer_email', rbCustomerEmail.value)
+      if (rbReference.value) params.set('reference', rbReference.value)
+      rbResult.value = await $fetch(`/api/hitpay/recurring-billing?${params}`)
+    } else if (rbTab.value === 'show') {
+      rbResult.value = await $fetch(`/api/hitpay/recurring-billing/${rbId.value}`)
+    } else if (rbTab.value === 'create') {
+      if (!validateJson(rbCreateBody.value)) { rbJsonError.value = jsonError.value; rbLoading.value = false; return }
+      rbJsonError.value = null
+      rbResult.value = await $fetch('/api/hitpay/recurring-billing', { method: 'POST', body: JSON.parse(rbCreateBody.value) })
+    } else if (rbTab.value === 'update') {
+      if (!validateJson(rbUpdateBody.value)) { rbJsonError.value = jsonError.value; rbLoading.value = false; return }
+      rbJsonError.value = null
+      rbResult.value = await $fetch(`/api/hitpay/recurring-billing/${rbId.value}`, { method: 'PUT', body: JSON.parse(rbUpdateBody.value) })
+    } else if (rbTab.value === 'delete') {
+      rbResult.value = await $fetch(`/api/hitpay/recurring-billing/${rbId.value}`, { method: 'DELETE' })
+    } else if (rbTab.value === 'pause') {
+      rbResult.value = await $fetch(`/api/hitpay/recurring-billing/${rbId.value}/pause`, { method: 'POST' })
+    } else if (rbTab.value === 'resume') {
+      rbResult.value = await $fetch(`/api/hitpay/recurring-billing/${rbId.value}/resume`, { method: 'POST' })
+    }
+  } catch (e: any) {
+    rbErrorMsg.value = e?.statusMessage || e?.message || 'Request failed'
+    rbResult.value = e?.data ?? null
+  } finally {
+    rbLoading.value = false
+  }
+}
+
+// ── Recurring Billing Settings ────────────────────────────────────────────────
+type RbSettingsTab = 'show' | 'create' | 'update' | 'delete'
+
+const rbSettingsTab = ref<RbSettingsTab>('show')
+const rbSettingsResult = ref<any>(null)
+const rbSettingsLoading = ref(false)
+const rbSettingsErrorMsg = ref<string | null>(null)
+const rbSettingsJsonError = ref<string | null>(null)
+
+const RB_SETTINGS_EXAMPLE = JSON.stringify({
+  renewal_reminders: true,
+  status_after_retrying: 'canceled',
+}, null, 2)
+
+const rbSettingsBody = ref(RB_SETTINGS_EXAMPLE)
+
+const RB_SETTINGS_TABS = [
+  { id: 'show'   as RbSettingsTab, label: 'Show',   method: 'GET',    scope: 'payments:read',   color: '#3b82f6' },
+  { id: 'create' as RbSettingsTab, label: 'Create', method: 'POST',   scope: 'payments:create', color: '#22c55e' },
+  { id: 'update' as RbSettingsTab, label: 'Update', method: 'PUT',    scope: 'payments:create', color: '#f59e0b' },
+  { id: 'delete' as RbSettingsTab, label: 'Delete', method: 'DELETE', scope: 'payments:cancel', color: '#ef4444' },
+]
+
+function setRbSettingsTab(tab: RbSettingsTab) {
+  rbSettingsTab.value = tab
+  rbSettingsResult.value = null
+  rbSettingsErrorMsg.value = null
+  rbSettingsJsonError.value = null
+}
+
+const activeRbSettingsTabInfo = computed(() => RB_SETTINGS_TABS.find(t => t.id === rbSettingsTab.value)!)
+
+const canSendRbSettings = computed(() => !rbSettingsLoading.value)
+
+async function sendRbSettings() {
+  rbSettingsLoading.value = true
+  rbSettingsResult.value = null
+  rbSettingsErrorMsg.value = null
+  try {
+    if (rbSettingsTab.value === 'show') {
+      rbSettingsResult.value = await $fetch('/api/hitpay/recurring-billing-settings')
+    } else if (rbSettingsTab.value === 'create') {
+      try { JSON.parse(rbSettingsBody.value) } catch (e: any) {
+        rbSettingsJsonError.value = `Invalid JSON: ${e.message}`
+        rbSettingsLoading.value = false
+        return
+      }
+      rbSettingsJsonError.value = null
+      rbSettingsResult.value = await $fetch('/api/hitpay/recurring-billing-settings', { method: 'POST', body: JSON.parse(rbSettingsBody.value) })
+    } else if (rbSettingsTab.value === 'update') {
+      try { JSON.parse(rbSettingsBody.value) } catch (e: any) {
+        rbSettingsJsonError.value = `Invalid JSON: ${e.message}`
+        rbSettingsLoading.value = false
+        return
+      }
+      rbSettingsJsonError.value = null
+      rbSettingsResult.value = await $fetch('/api/hitpay/recurring-billing-settings', { method: 'PUT', body: JSON.parse(rbSettingsBody.value) })
+    } else if (rbSettingsTab.value === 'delete') {
+      rbSettingsResult.value = await $fetch('/api/hitpay/recurring-billing-settings', { method: 'DELETE' })
+    }
+  } catch (e: any) {
+    rbSettingsErrorMsg.value = e?.statusMessage || e?.message || 'Request failed'
+    rbSettingsResult.value = e?.data ?? null
+  } finally {
+    rbSettingsLoading.value = false
+  }
+}
+
+// ── Subscription Plans ────────────────────────────────────────────────────────
+type SpTab = 'list' | 'show' | 'create' | 'update' | 'delete'
+
+const spTab = ref<SpTab>('list')
+const spResult = ref<any>(null)
+const spLoading = ref(false)
+const spErrorMsg = ref<string | null>(null)
+const spId = ref('')
+const spPerPage = ref('10')
+const spCurrentPage = ref('1')
+const spJsonError = ref<string | null>(null)
+
+const SP_CREATE_EXAMPLE = JSON.stringify({
+  name: 'Monthly Plan',
+  amount: 12,
+  cycle: 'monthly',
+  currency: 'SGD',
+}, null, 2)
+
+const SP_UPDATE_EXAMPLE = JSON.stringify({
+  name: 'Updated Plan',
+  amount: 15,
+}, null, 2)
+
+const spCreateBody = ref(SP_CREATE_EXAMPLE)
+const spUpdateBody = ref(SP_UPDATE_EXAMPLE)
+
+const SP_TABS = [
+  { id: 'list'   as SpTab, label: 'List',   method: 'GET',    scope: 'payments:read',   color: '#3b82f6' },
+  { id: 'show'   as SpTab, label: 'Show',   method: 'GET',    scope: 'payments:read',   color: '#3b82f6' },
+  { id: 'create' as SpTab, label: 'Create', method: 'POST',   scope: 'payments:create', color: '#22c55e' },
+  { id: 'update' as SpTab, label: 'Update', method: 'PUT',    scope: 'payments:create', color: '#f59e0b' },
+  { id: 'delete' as SpTab, label: 'Delete', method: 'DELETE', scope: 'payments:cancel', color: '#ef4444' },
+]
+
+function setSpTab(tab: SpTab) {
+  spTab.value = tab
+  spResult.value = null
+  spErrorMsg.value = null
+  spJsonError.value = null
+}
+
+const activeSpTabInfo = computed(() => SP_TABS.find(t => t.id === spTab.value)!)
+
+const canSendSp = computed(() => {
+  if (spLoading.value) return false
+  if (['show', 'update', 'delete'].includes(spTab.value) && !spId.value.trim()) return false
+  return true
+})
+
+async function sendSp() {
+  spLoading.value = true
+  spResult.value = null
+  spErrorMsg.value = null
+  try {
+    if (spTab.value === 'list') {
+      const params = new URLSearchParams()
+      if (spPerPage.value) params.set('perPage', spPerPage.value)
+      if (spCurrentPage.value) params.set('current_page', spCurrentPage.value)
+      spResult.value = await $fetch(`/api/hitpay/subscription-plan?${params}`)
+    } else if (spTab.value === 'show') {
+      spResult.value = await $fetch(`/api/hitpay/subscription-plan/${spId.value}`)
+    } else if (spTab.value === 'create') {
+      try { JSON.parse(spCreateBody.value) } catch (e: any) {
+        spJsonError.value = `Invalid JSON: ${e.message}`
+        spLoading.value = false
+        return
+      }
+      spJsonError.value = null
+      spResult.value = await $fetch('/api/hitpay/subscription-plan', { method: 'POST', body: JSON.parse(spCreateBody.value) })
+    } else if (spTab.value === 'update') {
+      try { JSON.parse(spUpdateBody.value) } catch (e: any) {
+        spJsonError.value = `Invalid JSON: ${e.message}`
+        spLoading.value = false
+        return
+      }
+      spJsonError.value = null
+      spResult.value = await $fetch(`/api/hitpay/subscription-plan/${spId.value}`, { method: 'PUT', body: JSON.parse(spUpdateBody.value) })
+    } else if (spTab.value === 'delete') {
+      spResult.value = await $fetch(`/api/hitpay/subscription-plan/${spId.value}`, { method: 'DELETE' })
+    }
+  } catch (e: any) {
+    spErrorMsg.value = e?.statusMessage || e?.message || 'Request failed'
+    spResult.value = e?.data ?? null
+  } finally {
+    spLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -570,6 +827,302 @@ async function sendRefunds() {
       <h2 style="margin-top: 0;">Response</h2>
       <div v-if="refundsErrorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">{{ refundsErrorMsg }}</div>
       <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ refundsResult !== null ? JSON.stringify(refundsResult, null, 2) : '— no response yet —' }}</pre>
+    </div>
+
+    <!-- ── Recurring Billing ─────────────────────────────────────────────────── -->
+    <h2 style="margin-bottom: 16px;">Recurring Billing</h2>
+
+    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; margin-bottom: 0; overflow-x: auto;">
+      <button
+        v-for="tab in RB_TABS"
+        :key="tab.id"
+        @click="setRbTab(tab.id)"
+        :style="`
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border: none; border-radius: 8px 8px 0 0;
+          cursor: pointer; white-space: nowrap; font-family: inherit; font-size: 14px;
+          font-weight: ${rbTab === tab.id ? '700' : '400'};
+          background: ${rbTab === tab.id ? '#fff' : 'transparent'};
+          border-bottom: ${rbTab === tab.id ? '2px solid #111' : '2px solid transparent'};
+          margin-bottom: -2px;
+        `"
+      >
+        <span :style="`font-size: 11px; font-weight: 700; color: #fff; background: ${tab.color}; border-radius: 4px; padding: 2px 5px;`">{{ tab.method }}</span>
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <span style="font-size: 13px; color: #666;">Required scope:</span>
+        <code style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 13px;">{{ activeRbTabInfo.scope }}</code>
+      </div>
+
+      <template v-if="rbTab === 'list'">
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/recurring-billing</code> — list recurring billing plans.</p>
+        <div style="display: flex; flex-direction: row; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+            perPage
+            <input v-model="rbPerPage" type="number" min="1" max="100" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; width: 80px;" />
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+            current_page
+            <input v-model="rbCurrentPage" type="number" min="1" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; width: 80px;" />
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+            status
+            <input v-model="rbStatus" type="text" placeholder="e.g. active" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; width: 120px;" />
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; flex: 1; min-width: 160px;">
+            customer_email
+            <input v-model="rbCustomerEmail" type="text" placeholder="customer@example.com" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px;" />
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; flex: 1; min-width: 120px;">
+            reference
+            <input v-model="rbReference" type="text" placeholder="REF-001" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px;" />
+          </label>
+        </div>
+      </template>
+
+      <template v-else-if="rbTab === 'show'">
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/recurring-billing/{id}</code> — retrieve a recurring billing plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Recurring Billing ID <span style="color: #ef4444;">*</span>
+          <input v-model="rbId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <template v-else-if="rbTab === 'create'">
+        <p style="margin-top: 0; color: #555;"><strong>POST</strong> <code>/v1/recurring-billing</code> — create a recurring billing plan.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #666;">Request Body (JSON)</span>
+          <button @click="rbCreateBody = RB_CREATE_EXAMPLE; rbJsonError = null" style="font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f9fafb;">Use Example</button>
+        </div>
+        <textarea v-model="rbCreateBody" @input="rbJsonError = null" rows="16"
+          style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: #fafafa;" />
+        <p v-if="rbJsonError" style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ rbJsonError }}</p>
+      </template>
+
+      <template v-else-if="rbTab === 'update'">
+        <p style="margin-top: 0; color: #555;"><strong>PUT</strong> <code>/v1/recurring-billing/{id}</code> — update a recurring billing plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Recurring Billing ID <span style="color: #ef4444;">*</span>
+          <input v-model="rbId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #666;">Request Body (JSON)</span>
+          <button @click="rbUpdateBody = RB_UPDATE_EXAMPLE; rbJsonError = null" style="font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f9fafb;">Use Example</button>
+        </div>
+        <textarea v-model="rbUpdateBody" @input="rbJsonError = null" rows="10"
+          style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: #fafafa;" />
+        <p v-if="rbJsonError" style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ rbJsonError }}</p>
+      </template>
+
+      <template v-else-if="rbTab === 'delete'">
+        <p style="margin-top: 0; color: #555;"><strong>DELETE</strong> <code>/v1/recurring-billing/{id}</code> — cancel a recurring billing plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Recurring Billing ID <span style="color: #ef4444;">*</span>
+          <input v-model="rbId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <template v-else-if="rbTab === 'pause'">
+        <p style="margin-top: 0; color: #555;"><strong>POST</strong> <code>/v1/recurring-billing/{id}/pause</code> — pause a recurring billing plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Recurring Billing ID <span style="color: #ef4444;">*</span>
+          <input v-model="rbId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <template v-else-if="rbTab === 'resume'">
+        <p style="margin-top: 0; color: #555;"><strong>POST</strong> <code>/v1/recurring-billing/{id}/resume</code> — resume a paused recurring billing plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Recurring Billing ID <span style="color: #ef4444;">*</span>
+          <input v-model="rbId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <button
+        @click="sendRb"
+        :disabled="!canSendRb"
+        :style="`margin-top: 20px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendRb ? 'pointer' : 'not-allowed'}; background: ${canSendRb ? '#111' : '#d1d5db'}; color: ${canSendRb ? '#fff' : '#9ca3af'};`"
+      >{{ rbLoading ? 'Loading…' : 'Send Request' }}</button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 40px;">
+      <h2 style="margin-top: 0;">Response</h2>
+      <div v-if="rbErrorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">{{ rbErrorMsg }}</div>
+      <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ rbResult !== null ? JSON.stringify(rbResult, null, 2) : '— no response yet —' }}</pre>
+    </div>
+
+    <!-- ── Recurring Billing Settings ──────────────────────────────────────── -->
+    <h2 style="margin-bottom: 16px;">Recurring Billing Settings</h2>
+
+    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; margin-bottom: 0; overflow-x: auto;">
+      <button
+        v-for="tab in RB_SETTINGS_TABS"
+        :key="tab.id"
+        @click="setRbSettingsTab(tab.id)"
+        :style="`
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border: none; border-radius: 8px 8px 0 0;
+          cursor: pointer; white-space: nowrap; font-family: inherit; font-size: 14px;
+          font-weight: ${rbSettingsTab === tab.id ? '700' : '400'};
+          background: ${rbSettingsTab === tab.id ? '#fff' : 'transparent'};
+          border-bottom: ${rbSettingsTab === tab.id ? '2px solid #111' : '2px solid transparent'};
+          margin-bottom: -2px;
+        `"
+      >
+        <span :style="`font-size: 11px; font-weight: 700; color: #fff; background: ${tab.color}; border-radius: 4px; padding: 2px 5px;`">{{ tab.method }}</span>
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <span style="font-size: 13px; color: #666;">Required scope:</span>
+        <code style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 13px;">{{ activeRbSettingsTabInfo.scope }}</code>
+      </div>
+
+      <template v-if="rbSettingsTab === 'show'">
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/recurring-billing-settings</code> — retrieve recurring billing settings.</p>
+      </template>
+
+      <template v-else-if="rbSettingsTab === 'create'">
+        <p style="margin-top: 0; color: #555;"><strong>POST</strong> <code>/v1/recurring-billing-settings</code> — create recurring billing settings.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #666;">Request Body (JSON)</span>
+          <button @click="rbSettingsBody = RB_SETTINGS_EXAMPLE; rbSettingsJsonError = null" style="font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f9fafb;">Use Example</button>
+        </div>
+        <textarea v-model="rbSettingsBody" @input="rbSettingsJsonError = null" rows="8"
+          style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: #fafafa;" />
+        <p v-if="rbSettingsJsonError" style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ rbSettingsJsonError }}</p>
+      </template>
+
+      <template v-else-if="rbSettingsTab === 'update'">
+        <p style="margin-top: 0; color: #555;"><strong>PUT</strong> <code>/v1/recurring-billing-settings</code> — update recurring billing settings.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #666;">Request Body (JSON)</span>
+          <button @click="rbSettingsBody = RB_SETTINGS_EXAMPLE; rbSettingsJsonError = null" style="font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f9fafb;">Use Example</button>
+        </div>
+        <textarea v-model="rbSettingsBody" @input="rbSettingsJsonError = null" rows="8"
+          style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: #fafafa;" />
+        <p v-if="rbSettingsJsonError" style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ rbSettingsJsonError }}</p>
+      </template>
+
+      <template v-else-if="rbSettingsTab === 'delete'">
+        <p style="margin-top: 0; color: #555;"><strong>DELETE</strong> <code>/v1/recurring-billing-settings</code> — delete recurring billing settings.</p>
+      </template>
+
+      <button
+        @click="sendRbSettings"
+        :disabled="!canSendRbSettings"
+        :style="`margin-top: 20px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendRbSettings ? 'pointer' : 'not-allowed'}; background: ${canSendRbSettings ? '#111' : '#d1d5db'}; color: ${canSendRbSettings ? '#fff' : '#9ca3af'};`"
+      >{{ rbSettingsLoading ? 'Loading…' : 'Send Request' }}</button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 40px;">
+      <h2 style="margin-top: 0;">Response</h2>
+      <div v-if="rbSettingsErrorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">{{ rbSettingsErrorMsg }}</div>
+      <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ rbSettingsResult !== null ? JSON.stringify(rbSettingsResult, null, 2) : '— no response yet —' }}</pre>
+    </div>
+
+    <!-- ── Subscription Plans ────────────────────────────────────────────────── -->
+    <h2 style="margin-bottom: 16px;">Subscription Plans</h2>
+
+    <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; border-bottom: 2px solid #e5e7eb; margin-bottom: 0; overflow-x: auto;">
+      <button
+        v-for="tab in SP_TABS"
+        :key="tab.id"
+        @click="setSpTab(tab.id)"
+        :style="`
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border: none; border-radius: 8px 8px 0 0;
+          cursor: pointer; white-space: nowrap; font-family: inherit; font-size: 14px;
+          font-weight: ${spTab === tab.id ? '700' : '400'};
+          background: ${spTab === tab.id ? '#fff' : 'transparent'};
+          border-bottom: ${spTab === tab.id ? '2px solid #111' : '2px solid transparent'};
+          margin-bottom: -2px;
+        `"
+      >
+        <span :style="`font-size: 11px; font-weight: 700; color: #fff; background: ${tab.color}; border-radius: 4px; padding: 2px 5px;`">{{ tab.method }}</span>
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <span style="font-size: 13px; color: #666;">Required scope:</span>
+        <code style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 13px;">{{ activeSpTabInfo.scope }}</code>
+      </div>
+
+      <template v-if="spTab === 'list'">
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/subscription-plan</code> — list subscription plans.</p>
+        <div style="display: flex; flex-direction: row; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+            perPage
+            <input v-model="spPerPage" type="number" min="1" max="100" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; width: 80px;" />
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+            current_page
+            <input v-model="spCurrentPage" type="number" min="1" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; width: 80px;" />
+          </label>
+        </div>
+      </template>
+
+      <template v-else-if="spTab === 'show'">
+        <p style="margin-top: 0; color: #555;"><strong>GET</strong> <code>/v1/subscription-plan/{id}</code> — retrieve a subscription plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Subscription Plan ID <span style="color: #ef4444;">*</span>
+          <input v-model="spId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <template v-else-if="spTab === 'create'">
+        <p style="margin-top: 0; color: #555;"><strong>POST</strong> <code>/v1/subscription-plan</code> — create a subscription plan.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #666;">Request Body (JSON)</span>
+          <button @click="spCreateBody = SP_CREATE_EXAMPLE; spJsonError = null" style="font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f9fafb;">Use Example</button>
+        </div>
+        <textarea v-model="spCreateBody" @input="spJsonError = null" rows="10"
+          style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: #fafafa;" />
+        <p v-if="spJsonError" style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ spJsonError }}</p>
+      </template>
+
+      <template v-else-if="spTab === 'update'">
+        <p style="margin-top: 0; color: #555;"><strong>PUT</strong> <code>/v1/subscription-plan/{id}</code> — update a subscription plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Subscription Plan ID <span style="color: #ef4444;">*</span>
+          <input v-model="spId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #666;">Request Body (JSON)</span>
+          <button @click="spUpdateBody = SP_UPDATE_EXAMPLE; spJsonError = null" style="font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #f9fafb;">Use Example</button>
+        </div>
+        <textarea v-model="spUpdateBody" @input="spJsonError = null" rows="8"
+          style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: #fafafa;" />
+        <p v-if="spJsonError" style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ spJsonError }}</p>
+      </template>
+
+      <template v-else-if="spTab === 'delete'">
+        <p style="margin-top: 0; color: #555;"><strong>DELETE</strong> <code>/v1/subscription-plan/{id}</code> — delete a subscription plan.</p>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 16px;">
+          Subscription Plan ID <span style="color: #ef4444;">*</span>
+          <input v-model="spId" type="text" placeholder="e.g. 019dfbb3-e763-735f-a6c6-1c9f006c6ec6" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;" />
+        </label>
+      </template>
+
+      <button
+        @click="sendSp"
+        :disabled="!canSendSp"
+        :style="`margin-top: 20px; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; font-family: inherit; cursor: ${canSendSp ? 'pointer' : 'not-allowed'}; background: ${canSendSp ? '#111' : '#d1d5db'}; color: ${canSendSp ? '#fff' : '#9ca3af'};`"
+      >{{ spLoading ? 'Loading…' : 'Send Request' }}</button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 40px;">
+      <h2 style="margin-top: 0;">Response</h2>
+      <div v-if="spErrorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">{{ spErrorMsg }}</div>
+      <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ spResult !== null ? JSON.stringify(spResult, null, 2) : '— no response yet —' }}</pre>
     </div>
 
   </div>
