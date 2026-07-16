@@ -23,7 +23,7 @@ onMounted(() => {
     redirectUri.value = `${window.location.origin}/api/oauth/callback`
   }
   if (!scopes.value) {
-    scopes.value = 'business:read payments payments:create payments:cancel payments:refund payments:read commerce commerce:read commerce:create commerce:update commerce:delete'
+    scopes.value = 'business:read payments commerce'
   }
 })
 
