@@ -9,6 +9,10 @@ const ALLOWED_RES = [
   /^recurring-billing-settings$/,
   /^subscription-plan(\/[^/]+)?$/,
   /^charge\/recurring-billing\/[^/]+$/,
+  /^products(\/[^/]+)?$/,
+  /^product-category$/,
+  /^orders(\/[^/]+)?$/,
+  /^invoices(\/[^/]+)?$/,
 ];
 
 function getResourcePath(event: any): string {
@@ -42,7 +46,7 @@ export default defineEventHandler(async (event) => {
     return hitpayFetch(event, qs ? `${path}?${qs}` : path);
   }
 
-  if (method === "POST" || method === "PUT") {
+  if (method === "POST" || method === "PUT" || method === "PATCH") {
     const body = await readBody(event);
     return hitpayFetch(event, path, {
       method,
