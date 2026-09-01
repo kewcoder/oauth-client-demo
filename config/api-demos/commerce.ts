@@ -50,12 +50,6 @@ export const commerceGroup: ApiGroupConfig = {
           needsId: true, idLabel: 'Product ID',
           bodyExample: { name: 'Updated Product', price: 24.99 },
         },
-        {
-          id: 'delete', label: 'Delete', method: 'DELETE', scope: 'commerce:delete', color: DELETE,
-          apiPath: '/v1/products/{id}',
-          description: 'Delete a product.',
-          needsId: true, idLabel: 'Product ID',
-        },
       ],
     },
     {
@@ -71,6 +65,46 @@ export const commerceGroup: ApiGroupConfig = {
             { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
             { key: 'current_page', label: 'current_page', type: 'number', defaultValue: '1' },
           ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/product-category/{id}',
+          description: 'Retrieve a single product category.',
+          needsId: true, idLabel: 'Category ID',
+        },
+      ],
+    },
+    {
+      id: 'add-ons',
+      title: 'Add-ons',
+      basePath: '/api/hitpay/add-ons',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/add-ons',
+          description: 'Paginated list of product add-ons.',
+          queryFields: [
+            { key: 'keywords', label: 'keywords', type: 'text' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
+          ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/add-ons/{id}',
+          description: 'Retrieve a single add-on.',
+          needsId: true, idLabel: 'Add-on ID',
+        },
+      ],
+    },
+    {
+      id: 'invoice-settings',
+      title: 'Invoice Settings',
+      basePath: '/api/hitpay/invoice-settings',
+      tabs: [
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/invoice-settings',
+          description: 'Retrieve invoice title, footer, late fee, and custom fields.',
         },
       ],
     },
@@ -157,12 +191,6 @@ export const commerceGroup: ApiGroupConfig = {
           description: 'Update an existing invoice.',
           needsId: true, idLabel: 'Invoice ID',
           bodyExample: { amount: 120, subtotal: 120 },
-        },
-        {
-          id: 'delete', label: 'Delete', method: 'DELETE', scope: 'commerce:delete', color: DELETE,
-          apiPath: '/v1/invoices/{id}',
-          description: 'Delete a pending invoice.',
-          needsId: true, idLabel: 'Invoice ID',
         },
       ],
     },
