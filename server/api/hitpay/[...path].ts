@@ -13,6 +13,13 @@ const ALLOWED_RES = [
   /^product-category$/,
   /^orders(\/[^/]+)?$/,
   /^invoices(\/[^/]+)?$/,
+  /^store-settings$/,
+  /^locations(\/[^/]+)?$/,
+  /^coupons(\/[^/]+)?$/,
+  /^discounts(\/[^/]+)?$/,
+  /^shipping(\/[^/]+)?$/,
+  /^pickups(\/[^/]+)?$/,
+  /^taxes(\/[^/]+)?$/,
 ];
 
 function getResourcePath(event: any): string {
@@ -42,6 +49,7 @@ export default defineEventHandler(async (event) => {
     if (query.status) params.set("status", String(query.status));
     if (query.customer_email) params.set("customer_email", String(query.customer_email));
     if (query.reference) params.set("reference", String(query.reference));
+    if (query.keywords) params.set("keywords", String(query.keywords));
     const qs = params.toString();
     return hitpayFetch(event, qs ? `${path}?${qs}` : path);
   }

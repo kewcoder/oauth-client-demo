@@ -9,7 +9,7 @@ const DELETE = '#ef4444'
 export const commerceGroup: ApiGroupConfig = {
   id: 'commerce',
   title: 'Commerce',
-  description: 'Products, categories, orders, and invoices (OAuth commerce:* scopes).',
+  description: 'Products, categories, orders, invoices, and store settings (OAuth commerce:* scopes).',
   scopes: ['commerce', 'commerce:read', 'commerce:create', 'commerce:update', 'commerce:delete'],
   resources: [
     {
@@ -163,6 +163,144 @@ export const commerceGroup: ApiGroupConfig = {
           apiPath: '/v1/invoices/{id}',
           description: 'Delete a pending invoice.',
           needsId: true, idLabel: 'Invoice ID',
+        },
+      ],
+    },
+    {
+      id: 'store-settings',
+      title: 'Store Settings',
+      basePath: '/api/hitpay/store-settings',
+      tabs: [
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/store-settings',
+          description: 'Retrieve online store settings.',
+        },
+      ],
+    },
+    {
+      id: 'locations',
+      title: 'Locations',
+      basePath: '/api/hitpay/locations',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/locations',
+          description: 'List store locations.',
+          queryFields: [
+            { key: 'keywords', label: 'keywords', type: 'text', placeholder: 'Name or location ID' },
+          ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/locations/{id}',
+          description: 'Retrieve a single location.',
+          needsId: true, idLabel: 'Location ID',
+        },
+      ],
+    },
+    {
+      id: 'coupons',
+      title: 'Coupons',
+      basePath: '/api/hitpay/coupons',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/coupons',
+          description: 'Paginated list of coupons.',
+          queryFields: [
+            { key: 'keywords', label: 'keywords', type: 'text' },
+            { key: 'perPage', label: 'perPage', type: 'number', defaultValue: '10' },
+          ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/coupons/{id}',
+          description: 'Retrieve a single coupon.',
+          needsId: true, idLabel: 'Coupon ID',
+        },
+      ],
+    },
+    {
+      id: 'discounts',
+      title: 'Discounts',
+      basePath: '/api/hitpay/discounts',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/discounts',
+          description: 'Paginated list of discounts.',
+          queryFields: [
+            { key: 'keywords', label: 'keywords', type: 'text' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
+          ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/discounts/{id}',
+          description: 'Retrieve a single discount.',
+          needsId: true, idLabel: 'Discount ID',
+        },
+      ],
+    },
+    {
+      id: 'shipping',
+      title: 'Shipping',
+      basePath: '/api/hitpay/shipping',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/shipping',
+          description: 'List shipping methods and store shipping flags.',
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/shipping/{id}',
+          description: 'Retrieve a single shipping method.',
+          needsId: true, idLabel: 'Shipping ID',
+        },
+      ],
+    },
+    {
+      id: 'pickups',
+      title: 'Pickups',
+      basePath: '/api/hitpay/pickups',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/pickups',
+          description: 'Paginated list of pickup locations.',
+          queryFields: [
+            { key: 'perPage', label: 'perPage', type: 'number', defaultValue: '20' },
+          ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/pickups/{id}',
+          description: 'Retrieve a single pickup.',
+          needsId: true, idLabel: 'Pickup ID',
+        },
+      ],
+    },
+    {
+      id: 'taxes',
+      title: 'Taxes',
+      basePath: '/api/hitpay/taxes',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/taxes',
+          description: 'Paginated list of tax settings (rates).',
+          queryFields: [
+            { key: 'keywords', label: 'keywords', type: 'text' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
+          ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/taxes/{id}',
+          description: 'Retrieve a single tax setting.',
+          needsId: true, idLabel: 'Tax ID',
         },
       ],
     },
