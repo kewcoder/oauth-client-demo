@@ -202,6 +202,11 @@ export const paymentsGroup: ApiGroupConfig = {
           description: 'Update recurring billing settings.',
           bodyExample: { renewal_reminders: true, status_after_retrying: 'canceled' },
         },
+        {
+          id: 'delete', label: 'Delete', method: 'DELETE', scope: 'payments:cancel', color: DELETE,
+          apiPath: '/v1/recurring-billing-settings',
+          description: 'Delete recurring billing settings.',
+        },
       ],
     },
     {

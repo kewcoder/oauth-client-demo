@@ -16,6 +16,9 @@ const ALLOWED_RES = [
   /^orders(\/[^/]+)?$/,
   /^invoices(\/[^/]+)?$/,
   /^store-settings$/,
+  /^store-links$/,
+  /^store-pages(\/[^/]+)?$/,
+  /^customers(\/[^/]+)?$/,
   /^locations(\/[^/]+)?$/,
   /^coupons(\/[^/]+)?$/,
   /^discounts(\/[^/]+)?$/,
@@ -52,6 +55,7 @@ export default defineEventHandler(async (event) => {
     if (query.customer_email) params.set("customer_email", String(query.customer_email));
     if (query.reference) params.set("reference", String(query.reference));
     if (query.keywords) params.set("keywords", String(query.keywords));
+    if (query.pos_discount) params.set("pos_discount", String(query.pos_discount));
     const qs = params.toString();
     return hitpayFetch(event, qs ? `${path}?${qs}` : path);
   }

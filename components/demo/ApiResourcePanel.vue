@@ -128,7 +128,7 @@ const {
       <div v-if="errorMsg" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #991b1b;">
         {{ errorMsg }}
       </div>
-      <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; overflow: auto; font-size: 13px; margin: 0;">{{ result !== null ? JSON.stringify(result, null, 2) : '— no response yet —' }}</pre>
+      <pre style="background: #f9fafb; padding: 16px; border-radius: 8px; max-height: 400px; overflow: auto; font-size: 13px; margin: 0;">{{ result !== null ? JSON.stringify(result, null, 2) : '— no response yet —' }}</pre>
     </div>
   </section>
 </template>

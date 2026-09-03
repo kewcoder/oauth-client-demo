@@ -1,6 +1,6 @@
 # HitPay OAuth Client Demo
 
-A Nuxt 3 demo that shows how a third-party app connects a HitPay merchant account via OAuth 2.0, stores the session in a cookie, and makes authenticated API calls — including a full Payment Requests playground.
+A Nuxt 3 demo that shows how a third-party app connects a HitPay merchant account via OAuth 2.0, stores the session in a cookie, and makes authenticated API calls — payments, commerce, customers, and store links.
 
 ## Features
 
@@ -9,7 +9,7 @@ A Nuxt 3 demo that shows how a third-party app connects a HitPay merchant accoun
 - Session stored in `hitpay_token` cookie after successful auth
 - Automatic access token refresh on `401` responses
 - Server-side API proxy to avoid CORS issues
-- Payment Requests playground: List, Show, Create, Update, Delete
+- API playground on `/connected`: Payments, Commerce, and Customers (same `/v1` paths as the public API)
 - Local HTTPS dev server with optional `mkcert` certificates
 
 ---
@@ -83,7 +83,7 @@ After a successful OAuth flow, `/connected` shows:
 
 - **Session** — token type, granted scopes, business info
 - **GET /info** — quick test of the authenticated connection
-- **Payment Requests playground** — tabbed UI for all five endpoints (see below)
+- **API playground** — Payments, Commerce, and Customers (see below)
 
 ---
 
@@ -113,39 +113,96 @@ Browser                  This App                    HitPay
 
 ---
 
-## Payment Requests Playground
+## API playground
 
-Available on `/connected` after authorizing. Each tab maps to one endpoint:
+Available on `/connected` after authorizing. Tabs come from `config/api-demos/`. Bodies and responses match the public `/v1` API (same as API key). Requests go through `/api/hitpay/...` so the access token stays on the server.
 
-| Tab    | Method   | Endpoint                        | Required scope     |
-|--------|----------|---------------------------------|--------------------|
-| List   | GET      | `/v1/payment-requests`          | `payments:read`    |
-| Show   | GET      | `/v1/payment-requests/{id}`     | `payments:read`    |
-| Create | POST     | `/v1/payment-requests`          | `payments:create`  |
-| Update | PUT      | `/v1/payment-requests/{id}`     | `payments:create`  |
-| Delete | DELETE   | `/v1/payment-requests/{id}`     | `payments:cancel`  |
+Foreign resource IDs return **403**. Missing IDs return **404**.
 
-Each tab includes an **example payload** button. All requests go through the server proxy at `/api/hitpay/...` so the access token is never exposed to the browser.
+### Payments
 
-### Create payload fields
-
-| Field | Type | Required | Notes |
+| Resource | Method | Endpoint | Scope |
 |---|---|---|---|
-| `currency` | string | yes | ISO 4217, e.g. `SGD` |
-| `amount` | number | yes | Min `0.30` |
-| `purpose` | string | no | Payment description |
-| `name` | string | no | Customer name |
-| `email` | string | no | Customer email |
-| `phone` | string | no | Up to 15 chars |
-| `redirect_url` | string | no | URL after payment |
-| `webhook` | string | no | Webhook callback URL |
-| `allow_repeated_payments` | `"true"` / `"false"` | no | Default `"false"` |
-| `send_email` | boolean | no | |
-| `send_sms` | boolean | no | |
-| `reference_number` | string | no | Max 255 chars |
-| `expiry_date` | string | no | Format: `Y-m-d H:i:s` |
-| `payment_methods` | string[] | no | Filter accepted methods |
-| `metadata` | object | no | Arbitrary key-value pairs |
+| Payment requests | GET POST PUT DELETE | `/v1/payment-requests`, `/v1/payment-requests/{id}` | `payments:read` / `create` / `cancel` |
+| Charges | GET | `/v1/charges`, `/v1/charges/{id}` | `payments:read` |
+| Refunds | POST GET | `/v1/refund`, `/v1/refund/{id}` | `payments:refund` / `read` |
+| Recurring billing | GET POST PUT DELETE + pause/resume | `/v1/recurring-billing` | `payments:read` / `create` / `cancel` |
+| Recurring billing settings | GET POST PUT DELETE | `/v1/recurring-billing-settings` | `payments:read` / `create` / `cancel` |
+| Subscription plans | GET POST PUT DELETE | `/v1/subscription-plan` | `payments:read` / `create` / `cancel` |
+
+Payment request create fields: `currency`, `amount` (min `0.30`), `purpose`, `name`, `email`, `phone`, `redirect_url`, `webhook`, `allow_repeated_payments`, `send_email`, `send_sms`, `reference_number`, `expiry_date`, `payment_methods`, `metadata`. `executor_id` is not set for OAuth or API key.
+
+### Commerce
+
+| Resource | Method | Endpoint | Scope | Notes |
+|---|---|---|---|---|
+| Products | GET POST PATCH DELETE | `/v1/products` | `commerce:read` / `create` / `update` / `delete` | |
+| Product categories | GET | `/v1/product-category` | `commerce:read` | |
+| Add-ons | GET | `/v1/add-ons` | `commerce:read` | `?product_id=` of another business → 404 |
+| Invoice settings | GET | `/v1/invoice-settings` | `commerce:read` | |
+| Orders | GET POST PATCH DELETE | `/v1/orders` | `commerce:read` / `create` / `update` / `delete` | Delete draft only |
+| Invoices | GET POST PUT DELETE | `/v1/invoices` | `commerce:read` / `create` / `update` / `delete` | Delete pending only |
+| Store settings | GET | `/v1/store-settings` | `commerce:read` | `{ store_settings }` — shop_state, tax, order form, favicon. `access_code` hidden |
+| Store links | GET PUT | `/v1/store-links` | `commerce:read` / `update` | Navigation, social, link-in-bio. PUT merges into published theme `data` (and draft if present) |
+| Store pages | GET | `/v1/store-pages`, `/v1/store-pages/{id}` | `commerce:read` | Custom pages + store-design `content`. Query `keywords`, `status` (`published`/`draft`), `per_page` |
+| Locations | GET | `/v1/locations` | `commerce:read` | Write stays API-key-only |
+| Coupons | GET | `/v1/coupons` | `commerce:read` | Query `keywords`, `per_page` |
+| Discounts | GET | `/v1/discounts` | `commerce:read` | Query `keywords`, `per_page`, `pos_discount` |
+| Shipping | GET | `/v1/shipping` | `commerce:read` | |
+| Pickups | GET | `/v1/pickups` | `commerce:read` | |
+| Taxes | GET | `/v1/taxes` | `commerce:read` | |
+
+#### Store links PUT
+
+Send at least one of `navigation_menus`, `social_menus`, `link_in_bio`. Each menu item: `id?`, `title`, `link`, `type`.
+
+| Field | Allowed `type` | `link` format |
+|---|---|---|
+| `navigation_menus` | `page`, `category`, plus social types | `page`/`category`: path starting with `/` |
+| `social_menus`, `link_in_bio.*_links` | `facebook`, `instagram`, `twitter`, `tiktok`, `linkedin`, `email`, `phone`, `whatsapp`, `telegram`, `link` | Matching host / `mailto:` / `tel:` / `https://wa.me/` |
+
+`link_in_bio`: `{ enabled, icon_links, button_links }`. Other theme keys (banners, layout) are not replaced.
+
+#### Store pages GET
+
+Read-only. `content` is the store-design payload (same table as the dashboard). No create/update/delete on this public route.
+
+| Query | Notes |
+|---|---|
+| `keywords` | Filter `title` |
+| `status` | `published` (`enabled=1`) or `draft` (`enabled=0`) |
+| `per_page` | Clamped 1–100, default 10 |
+
+Show response:
+
+```json
+{
+  "id": "uuid",
+  "business_id": "uuid",
+  "title": "About us",
+  "description": "…",
+  "content": "…",
+  "enabled": 1,
+  "page_path": "about-us",
+  "page_cover_id": null,
+  "page_cover_url": null,
+  "created_at": "…",
+  "updated_at": "…"
+}
+```
+
+List wraps the same objects in `{ data, links, meta }`. Foreign page IDs return **403**.
+
+### Customers
+
+Requires `customer:*` (not granted by `commerce`).
+
+| Method | Endpoint | Scope |
+|---|---|---|
+| GET | `/v1/customers`, `/v1/customers/{id}` | `customer:read` |
+| POST | `/v1/customers` | `customer:create` |
+| PATCH | `/v1/customers/{id}` | `customer:update` |
+| DELETE | `/v1/customers/{id}` | `customer:delete` |
 
 ---
 
@@ -154,17 +211,23 @@ Each tab includes an **example payload** button. All requests go through the ser
 Recommended scopes for the full demo:
 
 ```
-business:read payments payments:read payments:create payments:cancel payments:refund
+business:read payments commerce customer
 ```
+
+Umbrella scopes (`payments`, `commerce`, `customer`) do **not** pass `oauth.any-scope:payments:read` etc. Request the granular scopes (or approve them on the merchant) for each tab.
 
 | Scope | Grants access to |
 |---|---|
 | `business:read` | `GET /v1/info` |
-| `payments` | General payments access |
-| `payments:read` | List and show payment requests |
-| `payments:create` | Create and update payment requests |
-| `payments:cancel` | Delete / cancel payment requests |
-| `payments:refund` | Refund payments |
+| `payments:read` | Charges, payment requests, refunds, recurring, subscription plans |
+| `payments:create` | Create/update payment requests, recurring, plans |
+| `payments:cancel` | Cancel payment requests, recurring, plans, settings |
+| `payments:refund` | Create refunds |
+| `commerce:read` | Products, categories, add-ons, orders, invoices, store settings/links/pages, coupons, discounts, shipping, pickups, taxes, locations |
+| `commerce:create` | Create products, orders, invoices |
+| `commerce:update` | Update products, orders, invoices, store links |
+| `commerce:delete` | Delete products, orders, invoices |
+| `customer:read` / `create` / `update` / `delete` | Customer directory |
 
 ---
 
@@ -172,14 +235,7 @@ business:read payments payments:read payments:create payments:cancel payments:re
 
 All HitPay API calls from the browser go through `server/api/hitpay/[...path].ts`. This keeps the access token server-side and avoids CORS issues.
 
-| Method | Path | Proxies to |
-|---|---|---|
-| GET | `/api/hitpay/info` | `GET /v1/info` |
-| GET | `/api/hitpay/payment-requests` | `GET /v1/payment-requests` |
-| GET | `/api/hitpay/payment-requests/:id` | `GET /v1/payment-requests/:id` |
-| POST | `/api/hitpay/payment-requests` | `POST /v1/payment-requests` |
-| PUT | `/api/hitpay/payment-requests/:id` | `PUT /v1/payment-requests/:id` |
-| DELETE | `/api/hitpay/payment-requests/:id` | `DELETE /v1/payment-requests/:id` |
+Allow-listed resources in `server/api/hitpay/[...path].ts` include `info`, payment/charge/refund/recurring/subscription, products, product-category, add-ons, invoice-settings, orders, invoices, store-settings, store-links, store-pages, customers, locations, coupons, discounts, shipping, pickups, and taxes.
 
 ---
 

@@ -9,7 +9,7 @@ const DELETE = '#ef4444'
 export const commerceGroup: ApiGroupConfig = {
   id: 'commerce',
   title: 'Commerce',
-  description: 'Products, categories, orders, invoices, and store settings (OAuth commerce:* scopes).',
+  description: 'Catalog, orders, invoices, coupons, store settings, and store links (commerce:*).',
   scopes: ['commerce', 'commerce:read', 'commerce:create', 'commerce:update', 'commerce:delete'],
   resources: [
     {
@@ -49,6 +49,13 @@ export const commerceGroup: ApiGroupConfig = {
           description: 'Update an existing product.',
           needsId: true, idLabel: 'Product ID',
           bodyExample: { name: 'Updated Product', price: 24.99 },
+        },
+        {
+          id: 'delete', label: 'Delete', method: 'DELETE', scope: 'commerce:delete', color: DELETE,
+          apiPath: '/v1/products/{id}',
+          description: 'Delete a product.',
+          needsId: true, idLabel: 'Product ID',
+          warning: 'This permanently deletes the product.',
         },
       ],
     },
@@ -192,6 +199,13 @@ export const commerceGroup: ApiGroupConfig = {
           needsId: true, idLabel: 'Invoice ID',
           bodyExample: { amount: 120, subtotal: 120 },
         },
+        {
+          id: 'delete', label: 'Delete', method: 'DELETE', scope: 'commerce:delete', color: DELETE,
+          apiPath: '/v1/invoices/{id}',
+          description: 'Delete a pending invoice.',
+          needsId: true, idLabel: 'Invoice ID',
+          warning: 'Only pending invoices can be deleted.',
+        },
       ],
     },
     {
@@ -202,7 +216,64 @@ export const commerceGroup: ApiGroupConfig = {
         {
           id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
           apiPath: '/v1/store-settings',
-          description: 'Retrieve online store settings.',
+          description: 'Online store settings: shop_state, tax, order form, favicon. access_code is hidden on this public route.',
+        },
+      ],
+    },
+    {
+      id: 'store-links',
+      title: 'Store Links',
+      basePath: '/api/hitpay/store-links',
+      tabs: [
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/store-links',
+          description: 'Published navigation, social, and link-in-bio links from the active store theme.',
+        },
+        {
+          id: 'update', label: 'Update', method: 'PUT', scope: 'commerce:update', color: UPDATE,
+          apiPath: '/v1/store-links',
+          description: 'Merge into the active theme JSON (and draft if present). Send only the keys you want to change. Does not replace banner or layout fields.',
+          bodyExample: {
+            navigation_menus: [
+              { id: 'home', title: 'Home', link: '/', type: 'page' },
+            ],
+            social_menus: [
+              { id: 'ig', title: '@shop', link: 'https://instagram.com/shop', type: 'instagram' },
+            ],
+            link_in_bio: {
+              enabled: true,
+              icon_links: [
+                { id: 'wa', title: 'WhatsApp', link: 'https://wa.me/6581234567', type: 'whatsapp' },
+              ],
+              button_links: [
+                { id: 'web', title: 'Website', link: 'https://example.com', type: 'link' },
+              ],
+            },
+          },
+        },
+      ],
+    },
+    {
+      id: 'store-pages',
+      title: 'Store Pages',
+      basePath: '/api/hitpay/store-pages',
+      tabs: [
+        {
+          id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/store-pages',
+          description: 'Custom store pages from store design (title, path, content). Read-only.',
+          queryFields: [
+            { key: 'keywords', label: 'keywords', type: 'text' },
+            { key: 'status', label: 'status', type: 'text', placeholder: 'published or draft' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
+          ],
+        },
+        {
+          id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
+          apiPath: '/v1/store-pages/{id}',
+          description: 'Retrieve a single store page including store-design content.',
+          needsId: true, idLabel: 'Store Page ID',
         },
       ],
     },
@@ -238,7 +309,7 @@ export const commerceGroup: ApiGroupConfig = {
           description: 'Paginated list of coupons.',
           queryFields: [
             { key: 'keywords', label: 'keywords', type: 'text' },
-            { key: 'perPage', label: 'perPage', type: 'number', defaultValue: '10' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
           ],
         },
         {
@@ -261,6 +332,7 @@ export const commerceGroup: ApiGroupConfig = {
           queryFields: [
             { key: 'keywords', label: 'keywords', type: 'text' },
             { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
+            { key: 'pos_discount', label: 'pos_discount', type: 'text', placeholder: 'true' },
           ],
         },
         {
