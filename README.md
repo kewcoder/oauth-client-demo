@@ -117,7 +117,19 @@ Browser                  This App                    HitPay
 
 Available on `/connected` after authorizing. Tabs come from `config/api-demos/`. Bodies and responses match the public `/v1` API (same as API key). Requests go through `/api/hitpay/...` so the access token stays on the server.
 
-Foreign resource IDs return **403**. Missing IDs return **404**.
+Foreign resource IDs return **403** on OAuth. Missing IDs return **404**. API-key callers keep their live error shapes (invoice **422**, recurring/subscription **401**).
+
+### Pagination
+
+List endpoints accept **`per_page`**. Many commerce lists also accept legacy **`perPage`** (if both are sent, `perPage` wins):
+
+| Resource | `per_page` | `perPage` |
+|---|---|---|
+| Products, locations, coupons, discounts, pickups, taxes, add-ons, store-pages, product categories | yes | yes |
+| Recurring billing | yes | yes (original key) |
+| Orders, payment requests, subscription plans, invoices, customers, charges | yes | no |
+
+Defaults vary (products 10, pickups 20, locations 500, categories 20). Clamped lists are typically 1–100.
 
 ### Payments
 
@@ -140,32 +152,33 @@ Payment request create fields: `currency`, `amount` (min `0.30`), `purpose`, `na
 | Product categories | GET | `/v1/product-category` | `commerce:read` | |
 | Add-ons | GET | `/v1/add-ons` | `commerce:read` | `?product_id=` of another business → 404 |
 | Invoice settings | GET | `/v1/invoice-settings` | `commerce:read` | |
-| Orders | GET POST PATCH DELETE | `/v1/orders` | `commerce:read` / `create` / `update` / `delete` | Delete draft only |
+| Orders | GET POST PATCH DELETE | `/v1/orders` | `commerce:read` / `create` / `update` / `delete` | Delete draft only. OAuth `POST` with `channel=store_checkout` → **403** (storefront, not OAuth) |
 | Invoices | GET POST PUT DELETE | `/v1/invoices` | `commerce:read` / `create` / `update` / `delete` | Delete pending only |
 | Store settings | GET | `/v1/store-settings` | `commerce:read` | `{ store_settings }` — shop_state, tax, order form, favicon. `access_code` hidden |
-| Store links | GET PUT | `/v1/store-links` | `commerce:read` / `update` | Navigation, social, link-in-bio. PUT merges into published theme `data` (and draft if present) |
-| Store pages | GET | `/v1/store-pages`, `/v1/store-pages/{id}` | `commerce:read` | Custom pages + store-design `content`. Query `keywords`, `status` (`published`/`draft`), `per_page` |
-| Locations | GET | `/v1/locations` | `commerce:read` | Write stays API-key-only |
+| Store links | GET PUT | `/v1/store-links` | `commerce:read` / `update` | Navigation, footer columns, social, link-in-bio. PUT merges into published theme `data` (and draft if present) |
+| Store pages | GET | `/v1/store-pages`, `/v1/store-pages/{id}` | `commerce:read` | Custom pages **without** store-design `content`. Query `keywords`, `status` (`published`/`draft`), `per_page` or `perPage` |
+| Locations | GET | `/v1/locations` | `commerce:read` | Write stays API-key-only. Query `per_page` or `perPage` |
 | Coupons | GET | `/v1/coupons` | `commerce:read` | Query `keywords`, `per_page` |
 | Discounts | GET | `/v1/discounts` | `commerce:read` | Query `keywords`, `per_page`, `pos_discount` |
 | Shipping | GET | `/v1/shipping` | `commerce:read` | |
-| Pickups | GET | `/v1/pickups` | `commerce:read` | |
+| Pickups | GET | `/v1/pickups` | `commerce:read` | List only includes pickups that have a location |
 | Taxes | GET | `/v1/taxes` | `commerce:read` | |
 
 #### Store links PUT
 
-Send at least one of `navigation_menus`, `social_menus`, `link_in_bio`. Each menu item: `id?`, `title`, `link`, `type`.
+Send at least one of `navigation_menus`, `footer_link_1`, `footer_link_2`, `social_menus`, `link_in_bio`. Menu items: `id?`, `title`, `link`, `type`.
 
 | Field | Allowed `type` | `link` format |
 |---|---|---|
 | `navigation_menus` | `page`, `category`, plus social types | `page`/`category`: path starting with `/` |
+| `footer_link_1`, `footer_link_2` | footer types | `{ enabled, title, menus[] }` — menus use footer item types |
 | `social_menus`, `link_in_bio.*_links` | `facebook`, `instagram`, `twitter`, `tiktok`, `linkedin`, `email`, `phone`, `whatsapp`, `telegram`, `link` | Matching host / `mailto:` / `tel:` / `https://wa.me/` |
 
-`link_in_bio`: `{ enabled, icon_links, button_links }`. Other theme keys (banners, layout) are not replaced.
+`link_in_bio`: `{ enabled, icon_links, button_links }`. Other theme keys (banners, layout) are not replaced. Invalid theme JSON is not persisted (422).
 
 #### Store pages GET
 
-Read-only. `content` is the store-design payload (same table as the dashboard). No create/update/delete on this public route.
+Read-only. Public responses **omit** store-design `content`. No create/update/delete on this public route.
 
 | Query | Notes |
 |---|---|
@@ -181,7 +194,6 @@ Show response:
   "business_id": "uuid",
   "title": "About us",
   "description": "…",
-  "content": "…",
   "enabled": 1,
   "page_path": "about-us",
   "page_cover_id": null,

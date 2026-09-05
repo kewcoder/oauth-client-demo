@@ -119,9 +119,9 @@ export const paymentsGroup: ApiGroupConfig = {
         {
           id: 'list', label: 'List', method: 'GET', scope: 'payments:read', color: READ,
           apiPath: '/v1/recurring-billing',
-          description: 'List recurring billing plans.',
+          description: 'List recurring billing plans. Accepts perPage or per_page.',
           queryFields: [
-            { key: 'perPage', label: 'perPage', type: 'number', defaultValue: '10' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
             { key: 'current_page', label: 'current_page', type: 'number', defaultValue: '1' },
             { key: 'status', label: 'status', placeholder: 'e.g. active' },
             { key: 'customer_email', label: 'customer_email', placeholder: 'customer@example.com' },
@@ -217,9 +217,9 @@ export const paymentsGroup: ApiGroupConfig = {
         {
           id: 'list', label: 'List', method: 'GET', scope: 'payments:read', color: READ,
           apiPath: '/v1/subscription-plan',
-          description: 'List subscription plans.',
+          description: 'List subscription plans. Uses per_page only.',
           queryFields: [
-            { key: 'perPage', label: 'perPage', type: 'number', defaultValue: '10' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
             { key: 'current_page', label: 'current_page', type: 'number', defaultValue: '1' },
           ],
         },

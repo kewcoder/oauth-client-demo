@@ -67,10 +67,10 @@ export const commerceGroup: ApiGroupConfig = {
         {
           id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
           apiPath: '/v1/product-category',
-          description: 'List product categories.',
+          description: 'List product categories. Accepts per_page or perPage (and page).',
           queryFields: [
-            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '10' },
-            { key: 'current_page', label: 'current_page', type: 'number', defaultValue: '1' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '20' },
+            { key: 'page', label: 'page', type: 'number', defaultValue: '1' },
           ],
         },
         {
@@ -228,16 +228,23 @@ export const commerceGroup: ApiGroupConfig = {
         {
           id: 'show', label: 'Show', method: 'GET', scope: 'commerce:read', color: READ,
           apiPath: '/v1/store-links',
-          description: 'Published navigation, social, and link-in-bio links from the active store theme.',
+          description: 'Published navigation, footer columns, social, and link-in-bio links from the active store theme.',
         },
         {
           id: 'update', label: 'Update', method: 'PUT', scope: 'commerce:update', color: UPDATE,
           apiPath: '/v1/store-links',
-          description: 'Merge into the active theme JSON (and draft if present). Send only the keys you want to change. Does not replace banner or layout fields.',
+          description: 'Merge into the active theme JSON (and draft if present). Send only the keys you want to change (navigation, footer_link_1/2, social, link_in_bio). Does not replace banner or layout fields.',
           bodyExample: {
             navigation_menus: [
               { id: 'home', title: 'Home', link: '/', type: 'page' },
             ],
+            footer_link_1: {
+              enabled: true,
+              title: 'Shop',
+              menus: [
+                { id: 'about', title: 'About', link: '/about-us', type: 'page' },
+              ],
+            },
             social_menus: [
               { id: 'ig', title: '@shop', link: 'https://instagram.com/shop', type: 'instagram' },
             ],
@@ -262,7 +269,7 @@ export const commerceGroup: ApiGroupConfig = {
         {
           id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
           apiPath: '/v1/store-pages',
-          description: 'Custom store pages from store design (title, path, content). Read-only.',
+          description: 'Custom store pages (title, path). Public payload omits store-design content. Read-only.',
           queryFields: [
             { key: 'keywords', label: 'keywords', type: 'text' },
             { key: 'status', label: 'status', type: 'text', placeholder: 'published or draft' },
@@ -285,9 +292,10 @@ export const commerceGroup: ApiGroupConfig = {
         {
           id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
           apiPath: '/v1/locations',
-          description: 'List store locations.',
+          description: 'List store locations. Accepts per_page or perPage (default 500).',
           queryFields: [
             { key: 'keywords', label: 'keywords', type: 'text', placeholder: 'Name or location ID' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '20' },
           ],
         },
         {
@@ -369,9 +377,9 @@ export const commerceGroup: ApiGroupConfig = {
         {
           id: 'list', label: 'List', method: 'GET', scope: 'commerce:read', color: READ,
           apiPath: '/v1/pickups',
-          description: 'Paginated list of pickup locations.',
+          description: 'Paginated pickups that have a location. Accepts perPage or per_page.',
           queryFields: [
-            { key: 'perPage', label: 'perPage', type: 'number', defaultValue: '20' },
+            { key: 'per_page', label: 'per_page', type: 'number', defaultValue: '20' },
           ],
         },
         {
