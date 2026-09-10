@@ -96,7 +96,7 @@ Browser                  This App                    HitPay
    |                        |-- redirect to authorize ->|
    |                        |                           |-- user approves
    |                        |<-- callback with code ----|
-   |                        |-- POST /open/oauth/token ---->|
+   |                        |-- POST /v1/open/oauth/token ->|
    |                        |<-- access + refresh token-|
    |                        |-- GET /v1/info ---------->|
    |                        |<-- business summary ------|
@@ -110,6 +110,8 @@ Browser                  This App                    HitPay
 5. Server exchanges the code for tokens using the stored credentials.
 6. Server fetches the business summary from `GET /v1/info`.
 7. Session is written to `hitpay_token` cookie; user lands on `/connected`.
+
+On `/connected`, **Revoke token** calls `DELETE /v1/oauth/token` with the access token as `Authorization: Bearer`. That public API route only revokes the presented grant (not siblings). Token issue/refresh stay on `POST /v1/open/oauth/token`.
 
 ---
 

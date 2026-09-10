@@ -26,37 +26,13 @@ function buildTokenUrl(event: H3Event) {
   return new URL("/v1/open/oauth/token", config.hitpayApiBaseUrl).toString();
 }
 
-export function accessTokenId(accessToken: string): string | null {
-  const parts = accessToken.split(".");
-
-  if (parts.length < 2) {
-    return null;
-  }
-
-  try {
-    const padded = parts[1]
-      .replace(/-/g, "+")
-      .replace(/_/g, "/")
-      .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
-    const payload = JSON.parse(Buffer.from(padded, "base64").toString("utf8")) as { jti?: unknown };
-
-    return typeof payload.jti === "string" && payload.jti !== "" ? payload.jti : null;
-  } catch {
-    return null;
-  }
+function buildRevokeUrl(event: H3Event) {
+  const config = useRuntimeConfig(event);
+  return new URL("/v1/oauth/token", config.hitpayApiBaseUrl).toString();
 }
 
 export async function revokeAccessToken(event: H3Event, accessToken: string) {
-  const tokenId = accessTokenId(accessToken);
-
-  if (!tokenId) {
-    throw createError({ statusCode: 400, statusMessage: "Access token has no id" });
-  }
-
-  const config = useRuntimeConfig(event);
-  const url = new URL(`/v1/open/oauth/tokens/${encodeURIComponent(tokenId)}`, config.hitpayApiBaseUrl).toString();
-
-  await $fetch(url, {
+  await $fetch(buildRevokeUrl(event), {
     method: "DELETE",
     headers: {
       Accept: "application/json",
