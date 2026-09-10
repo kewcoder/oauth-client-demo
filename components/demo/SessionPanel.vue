@@ -4,22 +4,35 @@ const {
   tokenData,
   infoResult,
   infoLoading,
+  revokeLoading,
+  revokeError,
   copied,
   tokensVisible,
   copyToClipboard,
   callInfo,
+  revoke,
   logout,
 } = useOAuthSession()
 </script>
 
 <template>
   <div>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
       <h1>Connected</h1>
-      <button style="padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;" @click="logout">
-        Disconnect
-      </button>
+      <div style="display: flex; gap: 8px;">
+        <button
+          style="padding: 8px 14px; border-radius: 8px; border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; cursor: pointer;"
+          :disabled="revokeLoading"
+          @click="revoke"
+        >
+          {{ revokeLoading ? 'Revoking...' : 'Revoke token' }}
+        </button>
+        <button style="padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;" @click="logout">
+          Disconnect
+        </button>
+      </div>
     </div>
+    <p v-if="revokeError" style="color: #b91c1c; font-size: 13px;">{{ revokeError }}</p>
     <p>The OAuth flow completed. You can now test authenticated API requests.</p>
 
     <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 12px;">

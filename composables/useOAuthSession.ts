@@ -15,6 +15,8 @@ export function useOAuthSession() {
   const tokenData = ref<{ access_token: string; refresh_token: string | null } | null>(null)
   const infoResult = ref<any>(null)
   const infoLoading = ref(false)
+  const revokeLoading = ref(false)
+  const revokeError = ref<string | null>(null)
   const copied = ref<string | null>(null)
   const tokensVisible = ref(false)
 
@@ -60,6 +62,25 @@ export function useOAuthSession() {
     window.location.href = '/'
   }
 
+  async function revoke() {
+    if (!window.confirm('Revoke this access token on HitPay? The app will stop being able to call the API until you connect again.')) {
+      return
+    }
+
+    revokeLoading.value = true
+    revokeError.value = null
+
+    try {
+      await $fetch('/api/oauth/revoke', { method: 'POST' })
+      clearTokenCookie()
+      window.location.href = '/'
+    } catch (error: any) {
+      revokeError.value = error?.data?.statusMessage || error?.statusMessage || error?.message || 'Revoke failed'
+    } finally {
+      revokeLoading.value = false
+    }
+  }
+
   onMounted(loadTokenInfo)
 
   return {
@@ -67,11 +88,14 @@ export function useOAuthSession() {
     tokenData,
     infoResult,
     infoLoading,
+    revokeLoading,
+    revokeError,
     copied,
     tokensVisible,
     loadTokenInfo,
     copyToClipboard,
     callInfo,
+    revoke,
     logout,
   }
 }
